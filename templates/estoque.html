@@ -54,6 +54,8 @@
 
                     <input type="number" name="quantidade" placeholder="Quantidade inicial" min="0" required>
                     
+                    <input type="text" name="descricao" placeholder="Descrição/Indicação (ex: Analgésico e Antitérmico) - Opcional" maxlength="150" style="width: 100%; margin-top: 10px;">
+
                     <label style="width: 100%; display: block; margin: 10px 0;">
                         <input type="checkbox" name="alta_prioridade" value="1">
                         Definir como Alta Prioridade (Alerta de Estoque Mínimo)
@@ -62,14 +64,18 @@
                 </form>
             </div>
 
-            <h2>Medicamentos em Estoque</h2>
-            <table>
+            <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
+                <h2>Medicamentos em Estoque</h2>
+                <input type="text" id="buscador-med" onkeyup="filtrarMedicamentos()" placeholder="🔍 Buscar medicamento por nome..." style="padding: 8px 15px; border: 1px solid #cbd5e1; border-radius: 6px; width: 300px; font-size: 0.9rem;">
+            </div>
+
+            <table id="tabela-medicamentos">
                 <thead>
                     <tr>
                         <th>Medicamento</th>
                         <th>Tipo</th> 
                         <th>Dosagem</th> 
-                        <th>Quantidade</th>
+                        <th>Descrição</th> <th>Quantidade</th>
                         <th>Prioridade</th> 
                         <th>Entrada</th>
                         <th>Saída</th>
@@ -79,9 +85,12 @@
                 <tbody>
                     {% for med in medicamentos %}
                     <tr {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5 %} style="background-color:#ffcccc; font-weight:bold;" {% endif %}>
-                        <td>{{ med['nome'] }}</td>
+                        <td class="nome-med">{{ med['nome'] }}</td>
                         <td>{{ med['tipo'] if med['tipo'] else '-' }}</td>
                         <td>{{ med['dosagem'] if med['dosagem'] else '-' }}</td>
+                        <td style="font-style: italic; color: #475569; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ med['descricao'] }}">
+                            {{ med['descricao'] if med['descricao'] else '-' }}
+                        </td>
                         <td>{{ med['quantidade_atual'] }}</td>
                         <td>
                             {% if med['alta_prioridade'] == 1 %}
@@ -165,6 +174,28 @@
         </div>
 
     </div>
+
+    <script>
+        function filtrarMedicamentos() {
+            var input = document.getElementById("buscador-med");
+            var filter = input.value.toLowerCase();
+            var tabela = document.getElementById("tabela-medicamentos");
+            var linhas = tabela.getElementsByTagName("tr");
+
+            // Loop por todas as linhas da tabela (pulando o cabeçalho index 0)
+            for (var i = 1; i < linhas.length; i++) {
+                var tdNome = linhas[i].getElementsByClassName("nome-med")[0];
+                if (tdNome) {
+                    var textoNome = tdNome.textContent || tdNome.innerText;
+                    if (textoNome.toLowerCase().indexOf(filter) > -1) {
+                        linhas[i].style.display = "";
+                    } else {
+                        linhas[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
 
 </body>
 </html>

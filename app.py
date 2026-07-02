@@ -271,9 +271,10 @@ def cadastrar():
         return redirect(url_for('index'))
         
     nome = request.form.get('nome')
-    tipo = request.form.get('tipo_medicamento')  # Pega o valor do <select> do HTML
-    dosagem = request.form.get('dosagem')         # Pega o valor do input de dosagem do HTML
+    tipo = request.form.get('tipo_medicamento')  
+    dosagem = request.form.get('dosagem')         
     quantidade = request.form.get('quantidade')
+    descricao = request.form.get('descricao')  # Captura o novo campo opcional
     alta_prioridade = request.form.get('alta_prioridade', 0)
     
     if alta_prioridade == '1':
@@ -284,11 +285,11 @@ def cadastrar():
     conn = conectar()
     cursor = conn.cursor()
     
-    # Salvando exatamente nas colunas que você já tem criadas na tabela!
+    # Adicionado 'descricao' no INSERT SQL
     cursor.execute("""
-        INSERT INTO MEDICAMENTOS (nome, tipo, dosagem, quantidade_atual, alta_prioridade) 
-        VALUES (%s, %s, %s, %s, %s);
-    """, (nome, tipo, dosagem, int(quantidade), alta_prioridade))
+        INSERT INTO MEDICAMENTOS (nome, tipo, dosagem, descricao, quantidade_atual, alta_prioridade) 
+        VALUES (%s, %s, %s, %s, %s, %s);
+    """, (nome, tipo, dosagem, descricao, int(quantidade), alta_prioridade))
     
     conn.commit()
     cursor.close()
