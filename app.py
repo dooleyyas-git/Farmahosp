@@ -219,16 +219,48 @@ def logout():
     return redirect(url_for('index'))
 
 @app.route('/estoque')
+@app.route('/estoque', methods=['GET', 'POST'])
 def estoque():
+    # 1. Proteção de Login
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
+    # ==========================================================================
+    # PARTE NOVA: PROCESSAR CADASTRO DE UTENSÍLIO (RODA SE FOR SUBMIT DE UTENSÍLIO)
+    # ==========================================================================
+    if request.method == 'POST':
+        nome_utensilio = request.form.get('nome_utensilio')
+        qtd_utensilio = request.form.get('quantidade_utensilio')
+        
+        if nome_utensilio and qtd_utensilio:
+            # Insere na tabela de utensílios que você já possui no banco
+            cursor.execute(
+                "INSERT INTO utensilios (nome, quantidade_atual) VALUES (%s, %s);",
+                (nome_utensilio, int(qtd_utensilio))
+            )
+            conn.commit() # Salva no PostgreSQL do Render
+            
+            cursor.close()
+            conn.close()
+            
+            # Recarrega a página atualizando as tabelas
+            return redirect(url_for('estoque'))
+
+    # ==========================================================================
+    # SUA LOGICA ATUAL + BUSCA DE UTENSÍLIOS (RODA SEMPRE NO CARREGAMENTO)
+    # ==========================================================================
+    # 1. Busca os medicamentos (Como já estava no seu código)
     cursor.execute('SELECT * FROM MEDICAMENTOS ORDER BY nome ASC')
     medicamentos = cursor.fetchall()
 
+    # 2. NOVA BUSCA: Busca os utensílios para listar na nova aba
+    cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
+    utensilios = cursor.fetchall()
+
+    # Sua lógica de alertas atuais (mantida perfeitamente)
     medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
     ESTOQUE_MINIMO = 5
     alerta = []
@@ -237,8 +269,11 @@ def estoque():
         if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
             alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
 
+    cursor.close()
     conn.close()
-    return render_template('estoque.html', medicamentos=medicamentos, alerta=alerta)
+    
+    # AGORA RETORNA TAMBÉM OS UTENSÍLIOS PARA O HTML
+    return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, alerta=alerta)
 
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():

@@ -12,6 +12,50 @@ body {
     padding: 2rem;
 }
 
+input[id^="aba-"] {
+    display: none;
+}
+
+.abas-botoes {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 1px;
+}
+
+.botao-aba {
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    background-color: #f1f5f9;
+    color: #64748b;
+    font-weight: 600;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #e2e8f0;
+    border-bottom: none;
+    transition: all 0.2s;
+}
+
+.conteudo-aba {
+    display: none;
+}
+
+
+#aba-medicamentos:checked ~ .abas-botoes label[for="aba-medicamentos"],
+#aba-utensilios:checked ~ .abas-botoes label[for="aba-utensilios"] {
+    background-color: #ffffff;
+    color: #0f766e;
+    border-color: #e2e8f0;
+    position: relative;
+    border-top: 3px solid #0f766e;
+}
+
+#aba-medicamentos:checked ~ #conteudo-medicamentos,
+#aba-utensilios:checked ~ #conteudo-utensilios {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
 h1 {
     color: #0f766e;
     font-size: 2rem;
@@ -102,18 +146,6 @@ input:focus {
     width: 16px;
     height: 16px;
     accent-color: #0f766e;
-}
-
-button, type="submit" {
-    background-color: #0f766e;
-    color: #ffffff;
-    border: none;
-    padding: 0.65rem 1.5rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
 }
 
 button:hover {
