@@ -6,49 +6,148 @@ import urllib.parse as urlparse
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 
-# Flask          → cria a aplicação web
-# render_template → carrega arquivos HTML da pasta templates/
-# request        → lê dados enviados pelos formulários
-# redirect       → redireciona o usuário para outra página
-# url_for        → gera a URL de uma rota pelo nome da função
-# session        → guarda dados do usuário entre uma página e outra
-
 app = Flask(__name__)
 app.secret_key = 'farmacia_hospitalar_chave_secreta'
 
-# secret_key é obrigatória para o Flask usar sessões com segurança
-
 def conectar():
-    # Função auxiliar para abrir a conexão com o banco PostgreSQL no Render
     database_url = os.environ.get("DATABASE_URL")
-    
     if not database_url:
         raise ValueError("A variável de ambiente DATABASE_URL não foi configurada!")
+    return psycopg2.connect(database_url)
 
-    url = urlparse.urlparse(database_url)
-    dbname = url.path[1:]
-    user = url.username
-    password = url.password
-    host = url.hostname
-    port = url.port
+def inicializar_banco():
+    """Cria a estrutura idêntica do farmacia.db e insere os dados iniciais se não existirem"""
+    sql_tabelas = """
+    CREATE TABLE IF NOT EXISTS PESSOAS (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(150) NOT NULL,
+        cpf VARCHAR(11) UNIQUE NOT NULL,
+        senha VARCHAR(100)
+    );
 
-    return psycopg2.connect(
-        dbname=dbname,
-        user=user,
-        password=password,
-        host=host,
-        port=port
-    )
+    CREATE TABLE IF NOT EXISTS FUNCIONARIOS (
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE,
+        senha VARCHAR(100) NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS MEDICAMENTOS (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(100) NOT NULL,
+        descricao TEXT,
+        dosagem VARCHAR(50),
+        unidade VARCHAR(20),
+        quantidade_caixa INTEGER,
+        tipo VARCHAR(50),
+        quantidade_atual INTEGER DEFAULT 0,
+        alta_prioridade INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS LABORATORIOS (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(150) NOT NULL,
+        descricao TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS MEDICAMENTO_LABORATORIO (
+        id_medicamento INTEGER NOT NULL REFERENCES MEDICAMENTOS(id) ON DELETE CASCADE,
+        id_laboratorio INTEGER NOT NULL REFERENCES LABORATORIOS(id) ON DELETE CASCADE,
+        PRIMARY KEY (id_medicamento, id_laboratorio)
+    );
+
+    CREATE TABLE IF NOT EXISTS PACIENTES (
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS MEDICOS (
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE,
+        crm VARCHAR(50) UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ENFERMEIROS (
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE,
+        coren VARCHAR(50) UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS RECEITAS (
+        id SERIAL PRIMARY KEY,
+        paciente_id INTEGER NOT NULL REFERENCES PACIENTES(pessoa_id),
+        medico_id INTEGER NOT NULL REFERENCES MEDICOS(pessoa_id),
+        data_emissao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS ITENS_RECEITA (
+        receita_id INTEGER NOT NULL REFERENCES RECEITAS(id) ON DELETE CASCADE,
+        medicamento_id INTEGER NOT NULL REFERENCES MEDICAMENTOS(id),
+        quantidade INTEGER NOT NULL,
+        PRIMARY KEY (receita_id, medicamento_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS UTENSILIOS (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(100) NOT NULL,
+        descricao TEXT,
+        quantidade_atual INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS MOVIMENTACOES_MEDICAMENTOS (
+        id SERIAL PRIMARY KEY,
+        id_medicamento INTEGER NOT NULL REFERENCES MEDICAMENTOS(id) ON DELETE CASCADE,
+        tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('entrada', 'saida')),
+        quantidade INTEGER NOT NULL,
+        data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS MOVIMENTACOES_UTENSILIOS (
+        id SERIAL PRIMARY KEY,
+        id_utensilio INTEGER NOT NULL REFERENCES UTENSILIOS(id) ON DELETE CASCADE,
+        tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('entrada', 'saida')),
+        quantidade INTEGER NOT NULL,
+        data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS HISTORICO (
+        id SERIAL PRIMARY KEY,
+        id_medicamento INTEGER NOT NULL REFERENCES MEDICAMENTOS(id) ON DELETE CASCADE,
+        tipo VARCHAR(10) NOT NULL,
+        quantidade INTEGER NOT NULL,
+        data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """
+    
+    try:
+        conn = conectar()
+        cursor = conn.cursor()
+        
+        # Executa a criação das tabelas
+        cursor.execute(sql_tabelas)
+        
+        # Verifica se o usuário João existe (evita duplicações em reinicializações)
+        cursor.execute("SELECT id FROM PESSOAS WHERE cpf = '12345678999'")
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO PESSOAS (id, nome, cpf, senha) VALUES (1, 'Joao', '12345678999', 'Teste123!')")
+            cursor.execute("INSERT INTO FUNCIONARIOS (pessoa_id, senha) VALUES (1, 'Teste123!')")
+            cursor.execute("INSERT INTO MEDICAMENTOS (id, nome, quantidade_atual, alta_prioridade) VALUES (3, 'Maltodextrina', 0, 0)")
+            
+            # Sincroniza os contadores internos de IDs no PostgreSQL
+            cursor.execute("SELECT setval('pessoas_id_seq', (SELECT MAX(id) FROM PESSOAS))")
+            cursor.execute("SELECT setval('medicamentos_id_seq', (SELECT MAX(id) FROM MEDICAMENTOS))")
+            
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Banco de dados configurado e verificado com sucesso!")
+    except Exception as e:
+        print(f"Erro ao inicializar tabelas: {e}")
+
+# Roda a função para garantir as tabelas prontas antes do app receber acessos
+inicializar_banco()
 
 def salvar_historico_fechamento():
     print("Gerando relatório de movimentações...")
-    
-    # Cria a pasta 'relatorios' se ela não existir
     if not os.path.exists('relatorios'):
         os.makedirs('relatorios')
         
     try:
-        # Conecta ao banco PostgreSQL utilizando a função global ajustada
         conn = conectar()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         
@@ -61,11 +160,9 @@ def salvar_historico_fechamento():
         movimentacoes = cursor.fetchall()
         conn.close()
         
-        # Define o nome do arquivo com a data e hora atual
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         caminho_arquivo = f"relatorios/historico_{timestamp}.txt"
         
-        # Escreve os dados no arquivo de texto
         with open(caminho_arquivo, 'w', encoding='utf-8') as f:
             f.write("=== RELATÓRIO DE MOVIMENTAÇÕES DE ESTOQUE ===\n")
             f.write(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}\n")
@@ -78,33 +175,26 @@ def salvar_historico_fechamento():
                     linha = f"[{mov['data_hora']}] Medicamento: {mov['nome']} | Tipo: {mov['tipo'].upper()} | Qtd: {mov['quantidade']}\n"
                     f.write(linha)
                     
-        print(f"Histórico salvo com sucesso em: {caminho_arquivo}")
+        print(f"Histórico salvo em: {caminho_arquivo}")
     except Exception as e:
         print(f"Erro ao salvar histórico: {e}")
 
-# Registra a função para rodar automaticamente quando o app for encerrado
 atexit.register(salvar_historico_fechamento)
 
 @app.route('/')
 def index():
-    # Rota da página inicial (tela de login)
     return render_template('index.html', erro=None)
 
 @app.route('/login', methods=['POST'])
 def login():
-    # Rota que recebe e valida os dados do formulário de login
     cpf_formatado = request.form['cpf']
     senha = request.form['senha']
     
-    # Remove os pontos e o traço para buscar no banco apenas os números
     cpf_limpo = cpf_formatado.replace('.', '').replace('-', '')
-    print(f"DEBUG - CPF digitado (limpo): {cpf_limpo}")
-    print(f"DEBUG - Senha digitada: {senha}")
     
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # Busca usando o CPF limpo (Trocado ? por %s)
     cursor.execute('''
         SELECT p.id, p.nome, p.cpf 
         FROM PESSOAS p 
@@ -125,14 +215,12 @@ def login():
 
 @app.route('/logout')
 def logout():
-    # Apaga todos os dados da sessão (desloga o usuário)
     session.clear()
     return redirect(url_for('index'))
 
 @app.route('/estoque')
 def estoque():
     if 'funcionario_id' not in session:
-        # Bloqueia o acesso se o usuário não estiver logado
         return redirect(url_for('index'))
 
     conn = conectar()
@@ -147,10 +235,9 @@ def estoque():
 
     for med in medicamentos:
         if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
-            alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}). Comprar imediatamente!")
+            alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
 
     conn.close()
-
     return render_template('estoque.html', medicamentos=medicamentos, alerta=alerta)
 
 @app.route('/cadastrar', methods=['POST'])
@@ -160,8 +247,6 @@ def cadastrar():
 
     nome = request.form['nome']
     quantidade = int(request.form['quantidade'])
-    
-    # Lê o checkbox do HTML. Se estiver marcado, salva 1, se não, salva 0
     alta_prioridade = 1 if 'alta_prioridade' in request.form else 0
 
     if not nome or quantidade < 0:
@@ -170,7 +255,6 @@ def cadastrar():
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # Trocado ? por %s
     cursor.execute(
         'INSERT INTO MEDICAMENTOS (nome, quantidade_atual, alta_prioridade) VALUES (%s, %s, %s)',
         (nome, quantidade, alta_prioridade)
@@ -178,7 +262,6 @@ def cadastrar():
 
     conn.commit()
     conn.close()
-
     return redirect(url_for('estoque'))
 
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
@@ -189,12 +272,10 @@ def excluir(id_medicamento):
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # Trocado ? por %s
     cursor.execute('DELETE FROM MEDICAMENTOS WHERE id = %s', (id_medicamento,))
 
     conn.commit()
     conn.close()
-
     return redirect(url_for('estoque'))
 
 @app.route('/movimentar', methods=['POST'])
@@ -212,12 +293,7 @@ def movimentar():
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # Trocado ? por %s
-    cursor.execute(
-        'SELECT quantidade_atual FROM MEDICAMENTOS WHERE id = %s',
-        (id_medicamento,)
-    )
-
+    cursor.execute('SELECT quantidade_atual FROM MEDICAMENTOS WHERE id = %s', (id_medicamento,))
     medicamento = cursor.fetchone()
 
     if not medicamento:
@@ -229,28 +305,16 @@ def movimentar():
         return redirect(url_for('estoque'))
 
     nova_quantidade = medicamento['quantidade_atual'] + quantidade
-
     if tipo == 'saida':
         nova_quantidade = medicamento['quantidade_atual'] - quantidade
 
-    # Trocado ? por %s
-    cursor.execute(
-        'UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s',
-        (nova_quantidade, id_medicamento)
-    )
-
-    # Trocado ? por %s
-    cursor.execute(
-        'INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, %s, %s)',
-        (id_medicamento, tipo, quantidade)
-    )
+    cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_quantidade, id_medicamento))
+    cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, %s, %s)', (id_medicamento, tipo, quantidade))
 
     conn.commit()
     conn.close()
-
     return redirect(url_for('estoque'))
 
 if __name__ == '__main__':
-    # O Render configura dinamicamente a porta necessária do ambiente
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
