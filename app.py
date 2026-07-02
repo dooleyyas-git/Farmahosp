@@ -112,15 +112,18 @@ def inicializar_banco():
         quantidade INTEGER NOT NULL,
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
-    cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS data_validade DATE;")
     """
     
     try:
         conn = conectar()
         cursor = conn.cursor()
         
-        # Executa a criação das tabelas
+        # Executa a criação das tabelas estruturais
         cursor.execute(sql_tabelas)
+        
+        # CORREÇÃO: Garante as colunas novas de forma segura na tabela que já existia no Render
+        cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS data_validade DATE;")
+        cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS descricao TEXT;")
         
         # Verifica se o usuário João existe (evita duplicações em reinicializações)
         cursor.execute("SELECT id FROM PESSOAS WHERE cpf = '12345678999'")
@@ -244,7 +247,6 @@ def estoque():
     """)
     historico = cursor.fetchall()
 
-    # >>> ADICIONE OU VERIFIQUE ESTAS LINHAS AQUI PARA CORRIGIR O ERRO <<<
     alerta = []
     medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
     ESTOQUE_MINIMO = 5
@@ -252,12 +254,10 @@ def estoque():
     for med in medicamentos:
         if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
             alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
-    # >>> ============================================================ <<<
 
     cursor.close()
     conn.close()
     
-    # Agora o Python sabe exatamente o que é o 'alerta' e não vai mais quebrar
     return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, historico=historico, alerta=alerta)
 
 @app.route('/cadastrar', methods=['POST'])
