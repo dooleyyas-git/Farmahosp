@@ -55,7 +55,7 @@ def inicializar_banco():
     );
 
     CREATE TABLE IF NOT EXISTS PACIENTES (
-        pessoa_id INTEGER PRIMARY KEY REFERENCES PACIENTES(pessoa_id) ON DELETE CASCADE
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS MEDICOS (
@@ -114,7 +114,6 @@ def inicializar_banco():
     );
     """
     
-    # Passo 1: Criação das Tabelas e Registos Iniciais Base
     try:
         conn = conectar()
         cursor = conn.cursor()
@@ -154,7 +153,7 @@ def inicializar_banco():
         cursor_iso.close()
         conn_iso.close()
     except Exception:
-        pass # Ignora se a coluna já existir
+        pass 
 
     # Passo 3: Injeção Isolada da coluna 'ativo' nos Utensílios
     try:
@@ -166,6 +165,8 @@ def inicializar_banco():
         conn_iso.close()
     except Exception:
         pass
+
+inicializar_banco()
 
 def salvar_historico_fechamento():
     print("Gerando relatório de movimentações...")
@@ -272,8 +273,8 @@ def estoque():
     cursor.execute('SELECT * FROM MEDICAMENTOS WHERE ativo = 1 ORDER BY nome ASC')
     medicamentos = cursor.fetchall()
 
-    # 2. Busca os utensílios ativos (caso aplique soft delete neles futuramente, adicione 'WHERE ativo = 1')
-    cursor.execute('SELECT * FROM UTENSILIOS ORDER BY nome ASC')
+    # 2. Busca os utensílios ativos
+    cursor.execute('SELECT * FROM UTENSILIOS WHERE ativo = 1 ORDER BY nome ASC')
     utensilios = cursor.fetchall()
 
     # 3. Busca o histórico de movimentações recente
@@ -302,6 +303,7 @@ def estoque():
         historico=historico,
         alerta=alerta
     )
+
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
     if 'funcionario_id' not in session:
@@ -339,9 +341,9 @@ def cadastrar():
     conn.close()
     
     return redirect(url_for('estoque'))
-@app.route('/excluir/<int:id_medicamento>', methods=['POST'])
+
 @app.route('/entrada_rapida', methods=['POST'])
-def entrada_rapida():#nova função de entrada separada para não entrar em conflico com a função de carrinho
+def entrada_rapida():
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
@@ -357,16 +359,14 @@ def entrada_rapida():#nova função de entrada separada para não entrar em conf
 
     try:
         if tipo_item == 'medicamento':
-            # Busca a quantidade atual
             cursor.execute('SELECT quantidade_atual FROM MEDICAMENTOS WHERE id = %s', (id_item,))
             med = cursor.fetchone()
             if med:
-                nova_qtd = med['quantidade_atual'] + quantidade
+                nova_qtd = med['quantidade_atual'] + quantity
                 cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
                 cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, \'entrada\', %s)', (id_item, quantidade))
         
         elif tipo_item == 'utensilio':
-            # Busca a quantidade atual
             cursor.execute('SELECT quantidade_atual FROM UTENSILIOS WHERE id = %s', (id_item,))
             ut = cursor.fetchone()
             if ut:
@@ -383,17 +383,26 @@ def entrada_rapida():#nova função de entrada separada para não entrar em conf
         conn.close()
 
     return redirect(url_for('estoque'))
+
+@app.route('/excluir/<int:id_medicamento>', methods=['POST'])
 def excluir(id_medicamento):
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
     conn = conectar()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    cursor = conn.cursor()
 
-    cursor.execute('DELETE FROM MEDICAMENTOS WHERE id = %s', (id_medicamento,))
+    try:
+        # Soft Delete: Altera o status 'ativo' para 0 para sumir do estoque sem apagar histórico
+        cursor.execute('UPDATE MEDICAMENTOS SET ativo = 0 WHERE id = %s', (id_medicamento,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro ao desativar medicamento: {e}")
+    finally:
+        cursor.close()
+        conn.close()
 
-    conn.commit()
-    conn.close()
     return redirect(url_for('estoque'))
 
 @app.route('/movimentar', methods=['POST'])
@@ -401,7 +410,6 @@ def movimentar():
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
-    # Recebe os dados do carrinho enviados via JSON
     dados = request.get_json()
     if not dados or 'itens' not in dados:
         return {"sucesso": False, "erro": "Nenhum dado enviado"}, 400
@@ -410,37 +418,32 @@ def movimentar():
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
     try:
-        # Loop para processar cada item adicionado no carrinho
         for item in dados['itens']:
             id_item = int(item['id'])
             quantidade = int(item['quantidade'])
-            tipo_item = item['tipo_item'] # 'medicamento' ou 'utensilio'
+            tipo_item = item['tipo_item'] 
 
             if quantidade <= 0:
                 continue
 
             if tipo_item == 'medicamento':
-                # Verifica estoque do medicamento
                 cursor.execute('SELECT quantidade_atual, nome FROM MEDICAMENTOS WHERE id = %s', (id_item,))
                 med = cursor.fetchone()
                 if not med or med['quantidade_atual'] < quantidade:
                     conn.rollback()
                     return {"sucesso": False, "erro": f"Estoque insuficiente para {med['nome'] if med else 'Medicamento'}"}, 400
                 
-                # Atualiza estoque e insere na tabela de movimentação correta
                 nova_qtd = med['quantidade_atual'] - quantidade
                 cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
                 cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, \'saida\', %s)', (id_item, quantidade))
             
             elif tipo_item == 'utensilio':
-                # Verifica estoque do utensílio
                 cursor.execute('SELECT quantidade_atual, nome FROM UTENSILIOS WHERE id = %s', (id_item,))
                 ut = cursor.fetchone()
                 if not ut or ut['quantidade_atual'] < quantidade:
                     conn.rollback()
                     return {"sucesso": False, "erro": f"Estoque insuficiente para {ut['nome'] if ut else 'Utensílio'}"}, 400
                 
-                # Atualiza estoque e insere na tabela de movimentação de utensílios
                 nova_qtd = ut['quantidade_atual'] - quantidade
                 cursor.execute('UPDATE UTENSILIOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
                 cursor.execute('INSERT INTO MOVIMENTACOES_UTENSILIOS (id_utensilio, tipo, quantidade) VALUES (%s, \'saida\', %s)', (id_item, quantidade))
@@ -453,7 +456,7 @@ def movimentar():
     finally:
         cursor.close()
         conn.close()
-#para fechar o flask
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
