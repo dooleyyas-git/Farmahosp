@@ -15,7 +15,13 @@
             border-top: 3px solid #0f766e;
         }
 
-        /* Estilos para o Painel de Saída no canto inferior direito */
+        
+        .abas-container {
+            margin-right: 280px;
+            transition: margin-right 0.3s ease;
+        }
+
+       
         .carrinho-flutuante {
             position: fixed;
             bottom: 20px;
@@ -23,19 +29,26 @@
             background: white;
             border: 2px solid #0f766e;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 320px;
-            max-height: 400px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            width: 250px; 
+            max-height: 350px;
             display: flex;
             flex-direction: column;
             z-index: 1000;
             overflow: hidden;
+            animation: surgirPainel 0.2s ease-out;
+        }
+
+        @keyframes surgirPainel {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .carrinho-header {
             background: #0f766e;
             color: white;
-            padding: 10px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
             font-weight: bold;
             display: flex;
             justify-content: space-between;
@@ -43,20 +56,24 @@
         }
 
         .carrinho-itens {
-            padding: 10px;
+            padding: 8px;
             overflow-y: auto;
             flex-grow: 1;
-            font-size: 0.9rem;
-            max-height: 250px;
+            font-size: 0.8rem;
+            max-height: 200px;
+            background-color: #f8fafc;
         }
 
         .carrinho-item-linha {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
             padding-bottom: 4px;
+            background: white;
+            padding: 6px;
+            border-radius: 4px;
         }
 
         .btn-remover-item {
@@ -64,14 +81,15 @@
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 2px 6px;
+            padding: 1px 5px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            font-weight: bold;
         }
 
         .carrinho-footer {
-            padding: 10px;
-            background: #f8fafc;
+            padding: 8px;
+            background: white;
             border-top: 1px solid #e2e8f0;
         }
 
@@ -80,8 +98,9 @@
             color: white;
             border: none;
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border-radius: 6px;
+            font-size: 0.85rem;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
@@ -108,7 +127,7 @@
         {% endfor %}
     {% endif %}
 
-    <div class="abas-container">
+    <div class="abas-container" id="main-container">
         <input type="radio" id="aba-medicamentos" name="abas" checked>
         <input type="radio" id="aba-utensilios" name="abas">
         <input type="radio" id="aba-historico" name="abas">
@@ -197,8 +216,8 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 4px; align-items: center;">
-                                <input type="number" id="qtd-saida-med-{{ med['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
-                                <button type="button" onclick="adicionarAoCarrinho('{{ med['id'] }}', '{{ med['nome'] }}', 'medicamento')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
+                                <input type="number" id="qtd-saida-med-{{ med['id'] }}" min="1" value="1" style="width: 55px; padding: 4px;">
+                                <button type="button" onclick="adicionarAoCarrinho('{{ med['id'] }}', '{{ med['nome'] }}', 'medicamento')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+</button>
                             </div>
                         </td>
                         <td>
@@ -248,8 +267,8 @@
                         </td>
                         <td>
                             <div style="display: flex; gap: 4px; align-items: center;">
-                                <input type="number" id="qtd-saida-ut-{{ ut['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
-                                <button type="button" onclick="adicionarAoCarrinho('{{ ut['id'] }}', '{{ ut['nome'] }}', 'utensilio')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
+                                <input type="number" id="qtd-saida-ut-{{ ut['id'] }}" min="1" value="1" style="width: 55px; padding: 4px;">
+                                <button type="button" onclick="adicionarAoCarrinho('{{ ut['id'] }}', '{{ ut['nome'] }}', 'utensilio')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+</button>
                             </div>
                         </td>
                     </tr>
@@ -293,13 +312,13 @@
 
     <div class="carrinho-flutuante" id="carrinho-painel" style="display: none;">
         <div class="carrinho-header">
-            <span>Lista de Saída Coletiva</span>
-            <button onclick="limparCarrinho()" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Limpar Tudo</button>
+            <span>Lista de Saída Lote</span>
+            <button onclick="limparCarrinho()" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.75rem; text-decoration: underline;">Limpar</button>
         </div>
         <div class="carrinho-itens" id="carrinho-itens-lista">
             </div>
         <div class="carrinho-footer">
-            <button class="btn-confirmar-saida" onclick="enviarSaidaColetiva()">Confirmar Saída do Lote</button>
+            <button class="btn-confirmar-saida" onclick="enviarSaidaColetiva()">Confirmar Saída</button>
         </div>
     </div>
 
@@ -352,31 +371,32 @@
         function renderizarCarrinho() {
             var painel = document.getElementById("carrinho-painel");
             var lista = document.getElementById("carrinho-itens-lista");
+            var container = document.getElementById("main-container");
             
             if (carrinho.length === 0) {
                 painel.style.display = "none";
+                container.style.marginRight = "0px"; /* Devolve o espaço total ao esconder o carrinho */
                 return;
             }
 
             painel.style.display = "flex";
+            container.style.marginRight = "280px"; /* Mantém a margem protetora ativa */
             lista.innerHTML = "";
 
-            // Criação manual dos elementos HTML via JS puro para eliminar erros no VS Code
             for (var j = 0; j < carrinho.length; j++) {
                 var item = carrinho[j];
-                var rotuloTipo = (item.tipo_item === 'medicamento') ? 'Med' : 'Utensílio';
+                var rotuloTipo = (item.tipo_item === 'medicamento') ? 'Med' : 'Utens.';
 
                 var divLinha = document.createElement("div");
                 divLinha.className = "carrinho-item-linha";
 
                 var divTexto = document.createElement("div");
-                divTexto.innerHTML = "<strong>" + item.nome + "</strong> <span style='font-size:0.75rem; color:gray;'>(" + rotuloTipo + ")</span><br>Qtd: " + item.quantidade;
+                divTexto.innerHTML = "<strong>" + item.nome + "</strong> <span style='font-size:0.7rem; color:gray;'>(" + rotuloTipo + ")</span><br>Qtd: " + item.quantidade;
 
                 var btnRemover = document.createElement("button");
                 btnRemover.className = "btn-remover-item";
                 btnRemover.innerText = "X";
                 
-                // Escopo seguro para o clique de remoção
                 (function(idItem, tipoItem) {
                     btnRemover.onclick = function() {
                         removerDoCarrinho(idItem, tipoItem);
