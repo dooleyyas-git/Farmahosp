@@ -219,7 +219,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-
 @app.route('/estoque', methods=['GET', 'POST'])
 def estoque():
     if 'funcionario_id' not in session:
@@ -227,8 +226,6 @@ def estoque():
 
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-    # ... (Se você tiver a parte do POST de utensílios aqui, ela continua igual) ...
 
     # 1. Busca Medicamentos
     cursor.execute('SELECT * FROM MEDICAMENTOS ORDER BY nome ASC')
@@ -238,7 +235,7 @@ def estoque():
     cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
     utensilios = cursor.fetchall()
 
-    # 3. BUSCA O HISTÓRICO (O SELECT que deu erro antes entra exatamente aqui!)
+    # 3. Busca o Histórico
     cursor.execute("""
         SELECT m_mov.*, med.nome as medicamento_nome 
         FROM MOVIMENTACOES_MEDICAMENTOS m_mov
@@ -247,12 +244,20 @@ def estoque():
     """)
     historico = cursor.fetchall()
 
-    # ... (Sua lógica de alertas de estoque mínimo continua aqui) ...
+    # >>> ADICIONE OU VERIFIQUE ESTAS LINHAS AQUI PARA CORRIGIR O ERRO <<<
+    alerta = []
+    medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
+    ESTOQUE_MINIMO = 5
+
+    for med in medicamentos:
+        if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
+            alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
+    # >>> ============================================================ <<<
 
     cursor.close()
     conn.close()
     
-    # IMPORTANTE: repare que passamos 'historico=historico' aqui para o HTML receber os dados
+    # Agora o Python sabe exatamente o que é o 'alerta' e não vai mais quebrar
     return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, historico=historico, alerta=alerta)
 
 @app.route('/cadastrar', methods=['POST'])
