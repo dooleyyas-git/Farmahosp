@@ -238,7 +238,7 @@ def estoque():
     cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
     utensilios = cursor.fetchall()
 
-    # 3. CORREÇÃO: Busca do Histórico atualizada com LEFT JOIN e COALESCE
+    # 3. CORREÇÃO CRUCIAL: Agora com LEFT JOIN e COALESCE no lugar certo!
     cursor.execute("""
         SELECT m_mov.*, COALESCE(med.nome, 'Medicamento Removido') as medicamento_nome 
         FROM MOVIMENTACOES_MEDICAMENTOS m_mov
@@ -247,17 +247,15 @@ def estoque():
     """)
     historico = cursor.fetchall()
 
-    # >>> INTELIGÊNCIA DE ALERTAS: VALIDADE + ALTA PRIORIDADE (SEM LISTA FIXA VAZIA) <<<
+    # Bloco de alertas inteligente
     alerta = []
     ESTOQUE_MINIMO = 5
     hoje = datetime.now().date()
 
     for med in medicamentos:
-        # Alerta de Estoque Baseado no Checkbox Dinâmico de Alta Prioridade
         if med['alta_prioridade'] == 1 and med['quantidade_atual'] < ESTOQUE_MINIMO:
             alerta.append(f"⚠️ O medicamento de Alta Prioridade '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
         
-        # Alerta de Validade Inteligente
         if med['data_validade']:
             dias_para_vencer = (med['data_validade'] - hoje).days
             if dias_para_vencer < 0:
@@ -269,7 +267,6 @@ def estoque():
     conn.close()
     
     return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, historico=historico, alerta=alerta)
-
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
     if 'funcionario_id' not in session:
@@ -307,7 +304,6 @@ def cadastrar():
     conn.close()
     
     return redirect(url_for('estoque'))
-
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
 def excluir(id_medicamento):
     if 'funcionario_id' not in session:
