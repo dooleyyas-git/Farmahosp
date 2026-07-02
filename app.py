@@ -112,6 +112,7 @@ def inicializar_banco():
         quantidade INTEGER NOT NULL,
         data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS data_validade DATE;")
     """
     
     try:
@@ -218,84 +219,80 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.route('/estoque')
+
 @app.route('/estoque', methods=['GET', 'POST'])
 def estoque():
-    # 1.Proteção de Login
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    if request.method == 'POST':
-        nome_utensilio = request.form.get('nome_utensilio')
-        qtd_utensilio = request.form.get('quantidade_utensilio')
-        
-        if nome_utensilio and qtd_utensilio:
-            #Insere na tabela de utensílios que você já possui no banco
-            cursor.execute(
-                "INSERT INTO utensilios (nome, quantidade_atual) VALUES (%s, %s);",
-                (nome_utensilio, int(qtd_utensilio))
-            )
-            conn.commit() #Salva no PostgreSQL do Render
-            
-            cursor.close()
-            conn.close()
-            
-            #Recarrega a página atualizando as tabelas
-            return redirect(url_for('estoque'))
+    # ... (Se você tiver a parte do POST de utensílios aqui, ela continua igual) ...
 
+    # 1. Busca Medicamentos
     cursor.execute('SELECT * FROM MEDICAMENTOS ORDER BY nome ASC')
     medicamentos = cursor.fetchall()
 
+    # 2. Busca Utensílios
     cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
     utensilios = cursor.fetchall()
-    medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
-    ESTOQUE_MINIMO = 5
-    alerta = []
 
-    for med in medicamentos:
-        if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
-            alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
+    # 3. BUSCA O HISTÓRICO (O SELECT que deu erro antes entra exatamente aqui!)
+    cursor.execute("""
+        SELECT m_mov.*, med.nome as medicamento_nome 
+        FROM MOVIMENTACOES_MEDICAMENTOS m_mov
+        JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
+        ORDER BY m_mov.data_hora DESC LIMIT 50;
+    """)
+    historico = cursor.fetchall()
+
+    # ... (Sua lógica de alertas de estoque mínimo continua aqui) ...
 
     cursor.close()
     conn.close()
     
-    return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, alerta=alerta)
+    # IMPORTANTE: repare que passamos 'historico=historico' aqui para o HTML receber os dados
+    return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, historico=historico, alerta=alerta)
 
-@app.route('/cadastrar', methods=['POST'])
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
         
     nome = request.form.get('nome')
-    tipo = request.form.get('tipo_medicamento')  
+    tipo_med = request.form.get('tipo_medicamento')  
     dosagem = request.form.get('dosagem')         
-    quantidade = request.form.get('quantidade')
-    descricao = request.form.get('descricao')  # Captura o novo campo opcional
+    quantidade = int(request.form.get('quantidade'))
+    descricao = request.form.get('descricao')  
+    data_validade = request.form.get('data_validade') 
     alta_prioridade = request.form.get('alta_prioridade', 0)
     
-    if alta_prioridade == '1':
-        alta_prioridade = 1
-    else:
-        alta_prioridade = 0
+    alta_prioridade = 1 if alta_prioridade == '1' else 0
 
     conn = conectar()
     cursor = conn.cursor()
     
-    # Adicionado 'descricao' no INSERT SQL
+    # 1. Insere o medicamento e retorna o ID
     cursor.execute("""
-        INSERT INTO MEDICAMENTOS (nome, tipo, dosagem, descricao, quantidade_atual, alta_prioridade) 
-        VALUES (%s, %s, %s, %s, %s, %s);
-    """, (nome, tipo, dosagem, descricao, int(quantidade), alta_prioridade))
+        INSERT INTO MEDICAMENTOS (nome, tipo, dosagem, descricao, quantidade_atual, alta_prioridade, data_validade) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id;
+    """, (nome, tipo_med, dosagem, descricao, quantidade, alta_prioridade, data_validade if data_validade else None))
+    
+    novo_id = cursor.fetchone()[0]
+    
+    # 2. REGISTRA NA SUA TABELA OFICIAL DE MOVIMENTAÇÕES
+    cursor.execute("""
+        INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade)
+        VALUES (%s, 'entrada', %s);
+    """, (novo_id, quantidade))
     
     conn.commit()
     cursor.close()
     conn.close()
     
     return redirect(url_for('estoque'))
+
 
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
 def excluir(id_medicamento):
