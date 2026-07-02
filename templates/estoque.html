@@ -14,6 +14,82 @@
             position: relative;
             border-top: 3px solid #0f766e;
         }
+
+        /* Estilos para o Painel de Saída no canto inferior direito */
+        .carrinho-flutuante {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #0f766e;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 320px;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .carrinho-header {
+            background: #0f766e;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .carrinho-itens {
+            padding: 10px;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-size: 0.9rem;
+            max-height: 250px;
+        }
+
+        .carrinho-item-linha {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 4px;
+        }
+
+        .btn-remover-item {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .carrinho-footer {
+            padding: 10px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-confirmar-saida {
+            background: #0f766e;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-confirmar-saida:hover {
+            background: #0d5a54;
+        }
     </style>
 </head>
 
@@ -63,7 +139,6 @@
                     </select>
 
                     <input type="text" name="dosagem" placeholder="Dosagem (ex: 500mg, 1g)" required style="min-width: 150px;">
-
                     <input type="number" name="quantidade" placeholder="Quantidade inicial" min="0" required>
                     
                     <div style="display: inline-block; text-align: left; margin: 5px 0;">
@@ -71,7 +146,7 @@
                         <input type="date" name="data_validade" required>
                     </div>
 
-                    <input type="text" name="descricao" placeholder="Descrição/Indicação (ex: Analgésico e Antitérmico) - Opcional" maxlength="150" style="width: 100%; margin-top: 10px;">
+                    <input type="text" name="descricao" placeholder="Descrição/Indicação - Opcional" maxlength="150" style="width: 100%; margin-top: 10px;">
 
                     <label style="width: 100%; display: block; margin: 10px 0;">
                         <input type="checkbox" name="alta_prioridade" value="1">
@@ -97,7 +172,7 @@
                         <th>Quantidade</th>
                         <th>Prioridade</th> 
                         <th>Entrada</th>
-                        <th>Saída</th>
+                        <th>Selecionar Saída</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
@@ -122,26 +197,19 @@
                             {% endif %}
                         </td>
                         <td>
-                            <form action="/movimentar" method="POST">
-                                <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
-                                <input type="hidden" name="tipo" value="entrada">
-                                <input type="number" name="quantidade" min="1" value="1" required>
-                                <button type="submit">Entrada</button>
+                            <form action="/movimentar_individual_entrada_legado" onsubmit="alert('Use a rota padrão se necessário. Para entradas, adicione uma rota individual se desejar. Mantendo formulário simples.'); return false;">
+                                <span style="font-size: 0.85rem; color: gray;">Use a aba de cadastro ou ajuste se necessário</span>
                             </form>
                         </td>
                         <td>
-                            <form action="/movimentar" method="POST">
-                                <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
-                                <input type="hidden" name="tipo" value="saida">
-                                <input type="number" name="quantidade" min="1" value="1" required>
-                                <button type="submit">Saída</button>
-                            </form>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <input type="number" id="qtd-saida-med-{{ med['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
+                                <button type="button" onclick="adicionarAoCarrinho('{{ med['id'] }}', '{{ med['nome'] }}', 'medicamento')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
+                            </div>
                         </td>
                         <td>
                             <form action="/excluir/{{ med['id'] }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este medicamento?');">
-                                <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                                    Excluir
-                                </button>
+                                <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Excluir</button>
                             </form>
                         </td>
                     </tr>
@@ -167,6 +235,7 @@
                         <th>Utensílio Médico</th>
                         <th>Quantidade Atual</th>
                         <th>Status</th>
+                        <th>Selecionar Saída</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -183,21 +252,20 @@
                                 <span style="color: #059669; font-weight: bold;">Disponível</span>
                             {% endif %}
                         </td>
+                        <td>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <input type="number" id="qtd-saida-ut-{{ ut['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
+                                <button type="button" onclick="adicionarAoCarrinho('{{ ut['id'] }}', '{{ ut['nome'] }}', 'utensilio')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
-                    {% if not utensilios %}
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: #64748b;">Nenhum utensílio cadastrado no banco de dados.</td>
-                    </tr>
-                    {% endif %}
                 </tbody>
             </table>
         </div>
 
         <div class="conteudo-aba" id="conteudo-historico">
-            <h2>Histórico de Movimentações (Rastreabilidade)</h2>
-            <p style="color: #64748b; margin-bottom: 20px;">Registro em tempo real das entradas e saídas do estoque hospitalar.</p>
-            
+            <h2>Histórico de Movimentações</h2>
             <table>
                 <thead>
                     <tr>
@@ -213,27 +281,118 @@
                         <td>{{ log['data_hora'].strftime('%d/%m/%Y %H:%M:%S') if log['data_hora'] else '-' }}</td>
                         <td>{{ log['medicamento_nome'] }}</td>
                         <td>
-                            {% if log['tipo'] == 'entrada' %}
-                                <span style="background-color: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">ENTRADA</span>
-                            {% else %}
-                                <span style="background-color: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">SAÍDA</span>
-                            {% endif %}
+                            <span style="background-color: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">SAÍDA</span>
                         </td>
                         <td><strong>{{ log['quantidade'] }} unidades</strong></td>
                     </tr>
                     {% endfor %}
-                    {% if not historico %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #64748b;">Nenhuma movimentação registrada.</td>
-                    </tr>
-                    {% endif %}
                 </tbody>
             </table>
         </div>
 
     </div>
 
+    <div class="carrinho-flutuante" id="carrinho-painel" style="display: none;">
+        <div class="carrinho-header">
+            <span>Lista de Saída Coletiva</span>
+            <button onclick="limparCarrinho()" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Limpar Tudo</button>
+        </div>
+        <div class="carrinho-itens" id="carrinho-itens-lista">
+            </div>
+        <div class="carrinho-footer">
+            <button class="btn-confirmar-saida" onclick="enviarSaidaColetiva()">Confirmar Saída do Lote</button>
+        </div>
+    </div>
+
     <script>
+        // Array global para armazenar os itens selecionados para a saída coletiva
+        let carrinho = [];
+
+        function adicionarAoCarrinho(id, nome, tipo) {
+            let inputId = tipo === 'medicamento' ? `qtd-saida-med-${id}` : `qtd-saida-ut-${id}`;
+            let inputQtd = document.getElementById(inputId);
+            let quantidade = parseInt(inputQtd.value);
+
+            if (quantidade <= 0 || isNaN(quantidade)) {
+                alert("Insira uma quantidade válida!");
+                return;
+            }
+
+            // Verifica se o item já está no carrinho para somar a quantidade
+            let itemExistente = carrinho.find(item => item.id === id && item.tipo_item === tipo);
+            if (itemExistente) {
+                itemExistente.quantidade += quantidade;
+            } else {
+                carrinho.push({ id: id, nome: nome, quantidade: quantidade, tipo_item: tipo });
+            }
+
+            renderizarCarrinho();
+        }
+
+        function removerDoCarrinho(id, tipo) {
+            carrinho = carrinho.filter(item => !(item.id === id && item.tipo_item === tipo));
+            renderizarCarrinho();
+        }
+
+        function limparCarrinho() {
+            carrinho = [];
+            renderizarCarrinho();
+        }
+
+        function renderizarCarrinho() {
+            const painel = document.getElementById("carrinho-painel");
+            const lista = document.getElementById("carrinho-itens-lista");
+            
+            if (carrinho.length === 0) {
+                painel.style.display = "none";
+                return;
+            }
+
+            painel.style.display = "flex";
+            lista.innerHTML = "";
+
+            carrinho.forEach(item => {
+                let rotuloTipo = item.tipo_item === 'medicamento' ? 'Med' : 'Utensílio';
+                lista.innerHTML += `
+                    <div class="carrinho-item-linha">
+                        <div>
+                            <strong>${item.nome}</strong> <span style="font-size:0.75rem; color:gray;">(${rotuloTipo})</span><br>
+                            Qtd: ${item.quantidade}
+                        </div>
+                        <button class="btn-remover-item" onclick="removerDoCarrinho('${item.id}', '${item.tipo_item}')">X</button>
+                    </div>
+                `;
+            });
+        }
+
+        function enviarSaidaColetiva() {
+            if (carrinho.length === 0) return;
+
+            if (!confirm("Confirmar a saída em lote de todos os itens da lista?")) return;
+
+            // Faz o envio assíncrono via fetch usando JSON estruturado para o backend
+            fetch('/movimentar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itens: carrinho })
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(res => {
+                if (res.status === 200) {
+                    alert("Saída em lote processada com sucesso!");
+                    limparCarrinho();
+                    window.location.reload(); // Recarrega para atualizar os valores de estoque na tabela
+                } else {
+                    alert("Erro ao processar saída: " + res.body.erro);
+                }
+            })
+            .catch(err => {
+                alert("Erro de comunicação com o servidor.");
+                console.error(err);
+            });
+        }
+
+        // Funções de controle das abas
         document.addEventListener("DOMContentLoaded", function() {
             const radioMed = document.getElementById("aba-medicamentos");
             const radioUtensilios = document.getElementById("aba-utensilios");
@@ -285,6 +444,5 @@
             }
         }
     </script>
-
 </body>
 </html>

@@ -323,37 +323,58 @@ def movimentar():
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
-    id_medicamento = int(request.form['id_medicamento'])
-    tipo = request.form['tipo']
-    quantidade = int(request.form['quantidade'])
-
-    if quantidade <= 0:
-        return redirect(url_for('estoque'))
+    # Recebe os dados do carrinho enviados via JSON
+    dados = request.get_json()
+    if not dados or 'itens' not in dados:
+        return {"sucesso": False, "erro": "Nenhum dado enviado"}, 400
 
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute('SELECT quantidade_atual FROM MEDICAMENTOS WHERE id = %s', (id_medicamento,))
-    medicamento = cursor.fetchone()
+    try:
+        # Loop para processar cada item adicionado no carrinho
+        for item in dados['itens']:
+            id_item = int(item['id'])
+            quantidade = int(item['quantidade'])
+            tipo_item = item['tipo_item'] # 'medicamento' ou 'utensilio'
 
-    if not medicamento:
+            if quantidade <= 0:
+                continue
+
+            if tipo_item == 'medicamento':
+                # Verifica estoque do medicamento
+                cursor.execute('SELECT quantidade_atual, nome FROM MEDICAMENTOS WHERE id = %s', (id_item,))
+                med = cursor.fetchone()
+                if not med or med['quantidade_atual'] < quantidade:
+                    conn.rollback()
+                    return {"sucesso": False, "erro": f"Estoque insuficiente para {med['nome'] if med else 'Medicamento'}"}, 400
+                
+                # Atualiza estoque e insere na tabela de movimentação correta
+                nova_qtd = med['quantidade_atual'] - quantidade
+                cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
+                cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, \'saida\', %s)', (id_item, quantidade))
+            
+            elif tipo_item == 'utensilio':
+                # Verifica estoque do utensílio
+                cursor.execute('SELECT quantidade_atual, nome FROM UTENSILIOS WHERE id = %s', (id_item,))
+                ut = cursor.fetchone()
+                if not ut or ut['quantidade_atual'] < quantidade:
+                    conn.rollback()
+                    return {"sucesso": False, "erro": f"Estoque insuficiente para {ut['nome'] if ut else 'Utensílio'}"}, 400
+                
+                # Atualiza estoque e insere na tabela de movimentação de utensílios
+                nova_qtd = ut['quantidade_atual'] - quantidade
+                cursor.execute('UPDATE UTENSILIOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
+                cursor.execute('INSERT INTO MOVIMENTACOES_UTENSILIOS (id_utensilio, tipo, quantidade) VALUES (%s, \'saida\', %s)', (id_item, quantidade))
+
+        conn.commit()
+        return {"sucesso": True}
+    except Exception as e:
+        conn.rollback()
+        return {"sucesso": False, "erro": str(e)}, 500
+    finally:
+        cursor.close()
         conn.close()
-        return redirect(url_for('estoque'))
-
-    if tipo == 'saida' and medicamento['quantidade_atual'] < quantidade:
-        conn.close()
-        return redirect(url_for('estoque'))
-
-    nova_quantidade = medicamento['quantidade_atual'] + quantidade
-    if tipo == 'saida':
-        nova_quantidade = medicamento['quantidade_atual'] - quantidade
-
-    cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_quantidade, id_medicamento))
-    cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, %s, %s)', (id_medicamento, tipo, quantidade))
-
-    conn.commit()
-    conn.close()
-    return redirect(url_for('estoque'))
 #para fechar o flask
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
