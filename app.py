@@ -16,7 +16,7 @@ def conectar():
     return psycopg2.connect(database_url)
 
 def inicializar_banco():
-    """Cria a estrutura idêntica do farmacia.db e insere os dados iniciais se não existirem"""
+    """Cria a estrutura do banco e insere dados de forma segura sem travar o app"""
     sql_tabelas = """
     CREATE TABLE IF NOT EXISTS PESSOAS (
         id SERIAL PRIMARY KEY,
@@ -118,32 +118,32 @@ def inicializar_banco():
         conn = conectar()
         cursor = conn.cursor()
         
-        # Executa a criação das tabelas estruturais
         cursor.execute(sql_tabelas)
         
-        # CORREÇÃO: Garante as colunas novas de forma segura na tabela que já existia no Render
+        # Garante as colunas novas de forma individual e sem travar
         cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS data_validade DATE;")
         cursor.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN IF NOT EXISTS descricao TEXT;")
         
-        # Verifica se o usuário João existe (evita duplicações em reinicializações)
+        # Verifica Usuário João
         cursor.execute("SELECT id FROM PESSOAS WHERE cpf = '12345678999'")
         if not cursor.fetchone():
             cursor.execute("INSERT INTO PESSOAS (id, nome, cpf, senha) VALUES (1, 'Joao', '12345678999', 'Teste123!')")
             cursor.execute("INSERT INTO FUNCIONARIOS (pessoa_id, senha) VALUES (1, 'Teste123!')")
-            cursor.execute("INSERT INTO MEDICAMENTOS (id, nome, quantidade_atual, alta_prioridade) VALUES (3, 'Maltodextrina', 0, 0)")
-            
-            # Sincroniza os contadores internos de IDs no PostgreSQL
             cursor.execute("SELECT setval('pessoas_id_seq', (SELECT MAX(id) FROM PESSOAS))")
+            
+        # Verifica Medicamento de Teste de forma isolada
+        cursor.execute("SELECT id FROM MEDICAMENTOS WHERE id = 3")
+        if not cursor.fetchone():
+            cursor.execute("INSERT INTO MEDICAMENTOS (id, nome, quantidade_atual, alta_prioridade) VALUES (3, 'Maltodextrina', 0, 0)")
             cursor.execute("SELECT setval('medicamentos_id_seq', (SELECT MAX(id) FROM MEDICAMENTOS))")
             
         conn.commit()
         cursor.close()
         conn.close()
-        print("Banco de dados configurado e verificado com sucesso!")
+        print("Banco de dados configurado com sucesso!")
     except Exception as e:
         print(f"Erro ao inicializar tabelas: {e}")
 
-# Roda a função para garantir as tabelas prontas antes do app receber acessos
 inicializar_banco()
 
 def salvar_historico_fechamento():
@@ -179,7 +179,7 @@ def salvar_historico_fechamento():
                     linha = f"[{mov['data_hora']}] Medicamento: {mov['nome']} | Tipo: {mov['tipo'].upper()} | Qtd: {mov['quantidade']}\n"
                     f.write(linha)
                     
-        print(f"Histórico salvo em: {caminho_arquivo}")
+        print(f"Histórico saved to: {caminho_arquivo}")
     except Exception as e:
         print(f"Erro ao salvar histórico: {e}")
 
@@ -238,30 +238,28 @@ def estoque():
     cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
     utensilios = cursor.fetchall()
 
-    # 3. Busca o Histórico
+    # 3. CORREÇÃO: Busca do Histórico atualizada com LEFT JOIN e COALESCE
     cursor.execute("""
-        SELECT m_mov.*, med.nome as medicamento_nome 
+        SELECT m_mov.*, COALESCE(med.nome, 'Medicamento Removido') as medicamento_nome 
         FROM MOVIMENTACOES_MEDICAMENTOS m_mov
-        JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
+        LEFT JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
         ORDER BY m_mov.data_hora DESC LIMIT 50;
     """)
     historico = cursor.fetchall()
 
-   # >>> BLOCO DE ALERTAS CORRIGIDO E ATUALIZADO <<<
+    # >>> INTELIGÊNCIA DE ALERTAS: VALIDADE + ALTA PRIORIDADE (SEM LISTA FIXA VAZIA) <<<
     alerta = []
     ESTOQUE_MINIMO = 5
     hoje = datetime.now().date()
 
     for med in medicamentos:
-        # 1. Alerta de Estoque Mínimo
-        if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
-            alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
+        # Alerta de Estoque Baseado no Checkbox Dinâmico de Alta Prioridade
+        if med['alta_prioridade'] == 1 and med['quantidade_atual'] < ESTOQUE_MINIMO:
+            alerta.append(f"⚠️ O medicamento de Alta Prioridade '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
         
-        # 2. Alerta de Validade (Menos de 30 dias)
+        # Alerta de Validade Inteligente
         if med['data_validade']:
-            # O PostgreSQL pode retornar como objeto date, e calcular a diferença dos dias diretamente
             dias_para_vencer = (med['data_validade'] - hoje).days
-            # Caso ocorra o vencimento total
             if dias_para_vencer < 0:
                 alerta.append(f"❌ CRÍTICO: O medicamento '{med['nome']}' ESTÁ VENCIDO desde {med['data_validade'].strftime('%d/%m/%Y')}.")
             elif dias_para_vencer <= 30:
@@ -298,26 +296,17 @@ def cadastrar():
     
     novo_id = cursor.fetchone()[0]
     
-    # 2. REGISTRA NA SUA TABELA OFICIAL DE MOVIMENTAÇÕES
+    # 2. Registra na tabela oficial de movimentações
     cursor.execute("""
         INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade)
         VALUES (%s, 'entrada', %s);
     """, (novo_id, quantidade))
-    # 3. Busca o Histórico
-    cursor.execute("""
-        SELECT m_mov.*, COALESCE(med.nome, 'Medicamento Removido') as medicamento_nome 
-        FROM MOVIMENTACOES_MEDICAMENTOS m_mov
-        LEFT JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
-        ORDER BY m_mov.data_hora DESC LIMIT 50;
-    """)
-    historico = cursor.fetchall()
     
     conn.commit()
     cursor.close()
     conn.close()
     
     return redirect(url_for('estoque'))
-
 
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
 def excluir(id_medicamento):
