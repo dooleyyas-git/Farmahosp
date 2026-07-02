@@ -171,7 +171,6 @@
                         <th>Validade</th>
                         <th>Quantidade</th>
                         <th>Prioridade</th> 
-                        <th>Entrada</th>
                         <th>Selecionar Saída</th>
                         <th>Ações</th>
                     </tr>
@@ -195,11 +194,6 @@
                             {% else %}
                                 <span style="color: gray;">Normal</span>
                             {% endif %}
-                        </td>
-                        <td>
-                            <form action="/movimentar_individual_entrada_legado" onsubmit="alert('Use a rota padrão se necessário. Para entradas, adicione uma rota individual se desejar. Mantendo formulário simples.'); return false;">
-                                <span style="font-size: 0.85rem; color: gray;">Use a aba de cadastro ou ajuste se necessário</span>
-                            </form>
                         </td>
                         <td>
                             <div style="display: flex; gap: 4px; align-items: center;">
@@ -265,12 +259,12 @@
         </div>
 
         <div class="conteudo-aba" id="conteudo-historico">
-            <h2>Histórico de Movimentações</h2>
+            <h2>Histórico de Movimentações (Saídas Recentes)</h2>
             <table>
                 <thead>
                     <tr>
                         <th>Data / Hora</th>
-                        <th>Item / Medicamento</th>
+                        <th>Item Movimentado</th>
                         <th>Operação</th>
                         <th>Quantidade</th>
                     </tr>
@@ -286,6 +280,11 @@
                         <td><strong>{{ log['quantidade'] }} unidades</strong></td>
                     </tr>
                     {% endfor %}
+                    {% if not historico %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #64748b;">Nenhuma movimentação registrada no histórico.</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -305,21 +304,26 @@
     </div>
 
     <script>
-        // Array global para armazenar os itens selecionados para a saída coletiva
-        let carrinho = [];
+        var carrinho = [];
 
         function adicionarAoCarrinho(id, nome, tipo) {
-            let inputId = tipo === 'medicamento' ? `qtd-saida-med-${id}` : `qtd-saida-ut-${id}`;
-            let inputQtd = document.getElementById(inputId);
-            let quantidade = parseInt(inputQtd.value);
+            var inputId = (tipo === 'medicamento') ? 'qtd-saida-med-' + id : 'qtd-saida-ut-' + id;
+            var inputQtd = document.getElementById(inputId);
+            var quantidade = parseInt(inputQtd.value, 10);
 
             if (quantidade <= 0 || isNaN(quantidade)) {
                 alert("Insira uma quantidade válida!");
                 return;
             }
 
-            // Verifica se o item já está no carrinho para somar a quantidade
-            let itemExistente = carrinho.find(item => item.id === id && item.tipo_item === tipo);
+            var itemExistente = null;
+            for (var i = 0; i < carrinho.length; i++) {
+                if (carrinho[i].id === id && carrinho[i].tipo_item === tipo) {
+                    itemExistente = carrinho[i];
+                    break;
+                }
+            }
+
             if (itemExistente) {
                 itemExistente.quantidade += quantidade;
             } else {
@@ -330,7 +334,13 @@
         }
 
         function removerDoCarrinho(id, tipo) {
-            carrinho = carrinho.filter(item => !(item.id === id && item.tipo_item === tipo));
+            var novoCarrinho = [];
+            for (var i = 0; i < carrinho.length; i++) {
+                if (!(carrinho[i].id === id && carrinho[i].tipo_item === tipo)) {
+                    novoCarrinho.push(carrinho[i]);
+                }
+            }
+            carrinho = novoCarrinho;
             renderizarCarrinho();
         }
 
@@ -340,8 +350,8 @@
         }
 
         function renderizarCarrinho() {
-            const painel = document.getElementById("carrinho-painel");
-            const lista = document.getElementById("carrinho-itens-lista");
+            var painel = document.getElementById("carrinho-painel");
+            var lista = document.getElementById("carrinho-itens-lista");
             
             if (carrinho.length === 0) {
                 painel.style.display = "none";
@@ -351,18 +361,32 @@
             painel.style.display = "flex";
             lista.innerHTML = "";
 
-            carrinho.forEach(item => {
-                let rotuloTipo = item.tipo_item === 'medicamento' ? 'Med' : 'Utensílio';
-                lista.innerHTML += `
-                    <div class="carrinho-item-linha">
-                        <div>
-                            <strong>${item.nome}</strong> <span style="font-size:0.75rem; color:gray;">(${rotuloTipo})</span><br>
-                            Qtd: ${item.quantidade}
-                        </div>
-                        <button class="btn-remover-item" onclick="removerDoCarrinho('${item.id}', '${item.tipo_item}')">X</button>
-                    </div>
-                `;
-            });
+            // Criação manual dos elementos HTML via JS puro para eliminar erros no VS Code
+            for (var j = 0; j < carrinho.length; j++) {
+                var item = carrinho[j];
+                var rotuloTipo = (item.tipo_item === 'medicamento') ? 'Med' : 'Utensílio';
+
+                var divLinha = document.createElement("div");
+                divLinha.className = "carrinho-item-linha";
+
+                var divTexto = document.createElement("div");
+                divTexto.innerHTML = "<strong>" + item.nome + "</strong> <span style='font-size:0.75rem; color:gray;'>(" + rotuloTipo + ")</span><br>Qtd: " + item.quantidade;
+
+                var btnRemover = document.createElement("button");
+                btnRemover.className = "btn-remover-item";
+                btnRemover.innerText = "X";
+                
+                // Escopo seguro para o clique de remoção
+                (function(idItem, tipoItem) {
+                    btnRemover.onclick = function() {
+                        removerDoCarrinho(idItem, tipoItem);
+                    };
+                })(item.id, item.tipo_item);
+
+                divLinha.appendChild(divTexto);
+                divLinha.appendChild(btnRemover);
+                lista.appendChild(divLinha);
+            }
         }
 
         function enviarSaidaColetiva() {
@@ -370,37 +394,39 @@
 
             if (!confirm("Confirmar a saída em lote de todos os itens da lista?")) return;
 
-            // Faz o envio assíncrono via fetch usando JSON estruturado para o backend
             fetch('/movimentar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ itens: carrinho })
             })
-            .then(res => res.json().then(data => ({ status: res.status, body: data })))
-            .then(res => {
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    return { status: res.status, body: data };
+                });
+            })
+            .then(function(res) {
                 if (res.status === 200) {
                     alert("Saída em lote processada com sucesso!");
                     limparCarrinho();
-                    window.location.reload(); // Recarrega para atualizar os valores de estoque na tabela
+                    window.location.reload();
                 } else {
                     alert("Erro ao processar saída: " + res.body.erro);
                 }
             })
-            .catch(err => {
+            .catch(function(err) {
                 alert("Erro de comunicação com o servidor.");
                 console.error(err);
             });
         }
 
-        // Funções de controle das abas
         document.addEventListener("DOMContentLoaded", function() {
-            const radioMed = document.getElementById("aba-medicamentos");
-            const radioUtensilios = document.getElementById("aba-utensilios");
-            const radioHistorico = document.getElementById("aba-historico");
+            var radioMed = document.getElementById("aba-medicamentos");
+            var radioUtensilios = document.getElementById("aba-utensilios");
+            var radioHistorico = document.getElementById("aba-historico");
 
-            const conteudoMed = document.getElementById("conteudo-medicamentos");
-            const conteudoUtensilios = document.getElementById("conteudo-utensilios");
-            const conteudoHistorico = document.getElementById("conteudo-historico");
+            var conteudoMed = document.getElementById("conteudo-medicamentos");
+            var conteudoUtensilios = document.getElementById("conteudo-utensilios");
+            var conteudoHistorico = document.getElementById("conteudo-historico");
 
             function alternarAbas() {
                 if (radioMed && radioMed.checked) {
