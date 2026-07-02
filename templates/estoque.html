@@ -5,6 +5,16 @@
     <meta charset="UTF-8">
     <title>Sistema de Estoque - Farmácia Hospitalar</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
+    
+    <style>
+        #aba-historico:checked ~ .abas-botoes label[for="aba-historico"] {
+            background-color: #ffffff;
+            color: #0f766e;
+            border-color: #e2e8f0;
+            position: relative;
+            border-top: 3px solid #0f766e;
+        }
+    </style>
 </head>
 
 <body>
@@ -141,7 +151,6 @@
         </div>
 
         <div class="conteudo-aba" id="conteudo-utensilios">
-            
             <div class="cadastro">
                 <h2>Cadastrar Utensílio Hospitalar</h2>
                 <form action="/estoque" method="POST">
@@ -225,6 +234,38 @@
     </div>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const radioMed = document.getElementById("aba-medicamentos");
+            const radioUtensilios = document.getElementById("aba-utensilios");
+            const radioHistorico = document.getElementById("aba-historico");
+
+            const conteudoMed = document.getElementById("conteudo-medicamentos");
+            const conteudoUtensilios = document.getElementById("conteudo-utensilios");
+            const conteudoHistorico = document.getElementById("conteudo-historico");
+
+            function alternarAbas() {
+                if (radioMed && radioMed.checked) {
+                    if(conteudoMed) conteudoMed.style.display = "block";
+                    if(conteudoUtensilios) conteudoUtensilios.style.display = "none";
+                    if(conteudoHistorico) conteudoHistorico.style.display = "none";
+                } else if (radioUtensilios && radioUtensilios.checked) {
+                    if(conteudoMed) conteudoMed.style.display = "none";
+                    if(conteudoUtensilios) conteudoUtensilios.style.display = "block";
+                    if(conteudoHistorico) conteudoHistorico.style.display = "none";
+                } else if (radioHistorico && radioHistorico.checked) {
+                    if(conteudoMed) conteudoMed.style.display = "none";
+                    if(conteudoUtensilios) conteudoUtensilios.style.display = "none";
+                    if(conteudoHistorico) conteudoHistorico.style.display = "block";
+                }
+            }
+
+            if(radioMed) radioMed.addEventListener("change", alternarAbas);
+            if(radioUtensilios) radioUtensilios.addEventListener("change", alternarAbas);
+            if(radioHistorico) radioHistorico.addEventListener("change", alternarAbas);
+            
+            alternarAbas();
+        });
+
         function filtrarMedicamentos() {
             var input = document.getElementById("buscador-med");
             var filter = input.value.toLowerCase();
