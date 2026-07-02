@@ -1,73 +1,211 @@
-body{
-
-font-family: Arial;
-background:#f4f6f8;
-margin:40px;
-
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-h1{
-
-color:#2c3e50;
-
+body {
+    background-color: #f1f5f9;
+    color: #1e293b;
+    line-height: 1.6;
+    padding: 2rem;
 }
 
-.cadastro{
-
-background:white;
-padding:20px;
-margin-bottom:30px;
-border-radius:8px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
-
+h1 {
+    color: #0f766e;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #0d9488;
+    padding-bottom: 0.5rem;
+    display: inline-block;
+    width: calc(100% - 100px);
 }
 
-input{
-
-padding:10px;
-margin:5px;
-border:1px solid #ccc;
-border-radius:5px;
-
+h2 {
+    color: #0f172a;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+    font-weight: 600;
 }
 
-button{
-
-padding:8px 15px;
-border:none;
-background:#2c7be5;
-color:white;
-border-radius:5px;
-cursor:pointer;
-
+/* Botão de Sair */
+a[href="/logout"] {
+    background-color: #ef4444;
+    color: white !important;
+    padding: 0.5rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
-button:hover{
-
-background:#1a5ec8;
-
+a[href="/logout"]:hover {
+    background-color: #dc2626;
 }
 
-table{
-
-width:100%;
-border-collapse:collapse;
-background:white;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
-
+/* Painel de Cadastro */
+.cadastro {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 2rem;
 }
 
-th,td{
-
-padding:12px;
-border-bottom:1px solid #ddd;
-text-align:center;
-
+.cadastro h2 {
+    margin-top: 0;
+    color: #0f766e;
 }
 
-th{
+.cadastro form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
 
-background:#2c7be5;
-color:white;
+input[type="text"],
+input[type="number"] {
+    padding: 0.65rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #f8fafc;
+    color: #334155;
+    transition: all 0.2s;
+}
 
+input:focus {
+    outline: none;
+    background-color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.cadastro form label {
+    width: 100%;
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.cadastro form input[type="checkbox"] {
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    accent-color: #0f766e;
+}
+
+button, type="submit" {
+    background-color: #0f766e;
+    color: #ffffff;
+    border: none;
+    padding: 0.65rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    background-color: #0d9488;
+}
+
+/* Alertas de Estoque Crítico */
+.alerta {
+    background-color: #fff7ed !important;
+    color: #c2410c !important;
+    border: 1px solid #ffedd5 !important;
+    border-left: 5px solid #ea580c !important;
+    padding: 1rem !important;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+/* Tabela Hospitalar */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    margin-top: 1rem;
+}
+
+th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+}
+
+tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Sobrescreve linhas de aviso com um tom pastel limpo */
+tr[style*="background-color:#ffcccc"] {
+    background-color: #fef2f2 !important;
+    color: #991b1b !important;
+}
+tr[style*="background-color:#ffcccc"] td {
+    color: #991b1b !important;
+    border-bottom-color: #fee2e2;
+}
+
+/* Formulários de Entrada e Saída nas colunas */
+td form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+td form input[type="number"] {
+    width: 70px;
+    padding: 0.4rem;
+    text-align: center;
+}
+
+td form button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* Cores específicas dos botões */
+td form:has(input[value="entrada"]) button {
+    background-color: #059669;
+}
+td form:has(input[value="entrada"]) button:hover {
+    background-color: #047857;
+}
+
+td form:has(input[value="saida"]) button {
+    background-color: #0284c7;
+}
+td form:has(input[value="saida"]) button:hover {
+    background-color: #0369a1;
 }

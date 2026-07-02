@@ -1,74 +1,112 @@
-body{
-    margin:0;
-    padding:0;
-    font-family: Arial, Helvetica, sans-serif;
-    background: linear-gradient(135deg, #0f7a5c, #1bb98a);
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
-.login-container{
-    width:100%;
-    display:flex;
-    justify-content:center;
-    align-items:center;
+body {
+    background-color: #f1f5f9; /* Cinza cirúrgico claro */
+    color: #1e293b;
+    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
 }
 
-.login-box{
-    background:white;
-    padding:40px;
-    width:320px;
-    border-radius:10px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.2);
-    text-align:center;
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 1rem;
 }
 
-.login-box h1{
-    margin-bottom:5px;
-    color:#0f7a5c;
+.login-box {
+    background: #ffffff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(15, 118, 110, 0.1);
+    border-top: 6px solid #0f766e; /* Detalhe verde hospitalar */
 }
 
-.login-box h2{
-    margin-bottom:25px;
-    font-size:16px;
-    color:#666;
+.login-box h1 {
+    text-align: center;
+    color: #0f766e;
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
 }
 
-label{
-    display:block;
-    text-align:left;
-    margin-top:10px;
-    font-size:14px;
+.login-box h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-input{
-    width:100%;
-    padding:10px;
-    margin-top:5px;
-    border-radius:5px;
-    border:1px solid #ccc;
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.9rem;
 }
 
-button{
-    width:100%;
-    margin-top:20px;
-    padding:12px;
-    border:none;
-    background:#0f7a5c;
-    color:white;
-    font-size:16px;
-    border-radius:5px;
-    cursor:pointer;
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background-color: #f8fafc;
+    color: #334155;
+    transition: all 0.2s;
 }
 
-button:hover{
-    background:#0c5f48;
+input:focus {
+    outline: none;
+    background-color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-.rodape{
-    margin-top:15px;
-    font-size:12px;
-    color:#888;
+button[type="submit"] {
+    width: 100%;
+    background-color: #0f766e;
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+button[type="submit"]:hover {
+    background-color: #0d9488;
+}
+
+.erro {
+    background-color: #fef2f2;
+    color: #991b1b;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #fee2e2;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+    text-align: center;
+    font-weight: 500;
+}
+
+.rodape {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 1.5rem;
+    font-weight: 500;
 }
