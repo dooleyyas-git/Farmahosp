@@ -14,6 +14,42 @@
 
 <a href="/logout" style="float: right; margin-right: 20px;">Sair</a>
 
+<div class="abas-container">
+    <input type="radio" id="aba-medicamentos" name="abas" checked>
+    <input type="radio" id="aba-utensilios" name="abas">
+
+    <div class="abas-botoes">
+        <label for="aba-medicamentos" class="botao-aba">Medicamentos</label>
+        <label for="aba-utensilios" class="botao-aba">Utensílios Médicos</label>
+    </div>
+
+    <div class="conteudo-aba" id="conteudo-medicamentos">
+        </div>
+
+    <div class="conteudo-aba" id="conteudo-utensilios">
+        <h2>Cadastrar Utensílio</h2>
+        <h2>Utensílios em Estoque</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Utensílio</th>
+                    <th>Quantidade Atual</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ut in utensilios %}
+                <tr>
+                    <td>{{ ut['nome'] }}</td>
+                    <td>{{ ut['quantidade_atual'] }}</td>
+                    <td>
+                        </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 <div class="cadastro">
 
     <h2>Cadastrar Medicamento</h2>
