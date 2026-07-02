@@ -305,6 +305,49 @@ def cadastrar():
     
     return redirect(url_for('estoque'))
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
+@app.route('/entrada_rapida', methods=['POST'])
+def entrada_rapida():#nova função de entrada separada para não entrar em conflico com a função de carrinho
+    if 'funcionario_id' not in session:
+        return redirect(url_for('index'))
+
+    id_item = int(request.form['id'])
+    quantidade = int(request.form['quantidade'])
+    tipo_item = request.form['tipo_item'] # 'medicamento' ou 'utensilio'
+
+    if quantidade <= 0:
+        return redirect(url_for('estoque'))
+
+    conn = conectar()
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+    try:
+        if tipo_item == 'medicamento':
+            # Busca a quantidade atual
+            cursor.execute('SELECT quantidade_atual FROM MEDICAMENTOS WHERE id = %s', (id_item,))
+            med = cursor.fetchone()
+            if med:
+                nova_qtd = med['quantidade_atual'] + quantidade
+                cursor.execute('UPDATE MEDICAMENTOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
+                cursor.execute('INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade) VALUES (%s, \'entrada\', %s)', (id_item, quantidade))
+        
+        elif tipo_item == 'utensilio':
+            # Busca a quantidade atual
+            cursor.execute('SELECT quantidade_atual FROM UTENSILIOS WHERE id = %s', (id_item,))
+            ut = cursor.fetchone()
+            if ut:
+                nova_qtd = ut['quantidade_atual'] + quantidade
+                cursor.execute('UPDATE UTENSILIOS SET quantidade_atual = %s WHERE id = %s', (nova_qtd, id_item))
+                cursor.execute('INSERT INTO MOVIMENTACOES_UTENSILIOS (id_utensilio, tipo, quantidade) VALUES (%s, \'entrada\', %s)', (id_item, quantidade))
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro na entrada rápida: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('estoque'))
 def excluir(id_medicamento):
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
