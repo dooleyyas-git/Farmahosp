@@ -4,14 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Sistema de Estoque - Farmácia Hospitalar</title>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
 </head>
 
 <body>
 
 <h1>Sistema de Controle de Estoque</h1>
-
 <a href="/logout" style="float: right; margin-right: 20px;">Sair</a>
 
 <div class="abas-container">
@@ -24,17 +22,97 @@
     </div>
 
     <div class="conteudo-aba" id="conteudo-medicamentos">
+
+        <div class="cadastro">
+            <h2>Cadastrar Medicamento</h2>
+            <form action="/cadastrar" method="POST">
+                <input type="text" name="nome" placeholder="Nome do medicamento" required>
+                <input type="number" name="quantidade" placeholder="Quantidade inicial" min="0" required>
+                <label style="display: block; margin: 10px 0;">
+                    <input type="checkbox" name="alta_prioridade" value="1">
+                    Definir como Alta Prioridade (Alerta de Estoque Mínimo)
+                </label>
+                <button type="submit">Cadastrar</button>
+            </form>
         </div>
 
-    <div class="conteudo-aba" id="conteudo-utensilios">
-        <h2>Cadastrar Utensílio</h2>
+        <h2>Medicamentos em Estoque</h2>
+        {% set estoque_minimo = 5 %}
+        {% for med in medicamentos %}
+            {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < estoque_minimo %}
+                <div class="alerta" style="background-color: #fff3cd; color: #856404; padding: 10px; margin-bottom: 10px; border: 1px solid #ffeeba; border-radius: 4px;">
+                    ⚠️ O medicamento "{{ med['nome'] }}" está abaixo do estoque mínimo ({{ estoque_minimo }}). Comprar imediatamente!
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Medicamento</th>
+                    <th>Quantidade</th>
+                    <th>Prioridade</th> 
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Ações</th> 
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in medicamentos %}
+                <tr {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5 %} style="background-color:#ffcccc; font-weight:bold;" {% endif %}>
+                    <td>{{ med['nome'] }}</td>
+                    <td>{{ med['quantidade_atual'] }}</td>
+                    <td>
+                        {% if med['alta_prioridade'] == 1 %}
+                            <span style="color: red; font-weight: bold;">Alta</span>
+                        {% else %}
+                            <span style="color: gray;">Normal</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="/movimentar" method="POST">
+                            <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
+                            <input type="hidden" name="tipo" value="entrada">
+                            <input type="number" name="quantidade" min="1" value="1" required>
+                            <button type="submit">Entrada</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="/movimentar" method="POST">
+                            <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
+                            <input type="hidden" name="tipo" value="saida">
+                            <input type="number" name="quantidade" min="1" value="1" required>
+                            <button type="submit">Saída</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="/excluir/{{ med['id'] }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este medicamento?');">
+                            <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                Excluir
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div> <div class="conteudo-aba" id="conteudo-utensilios">
+        <div class="cadastro">
+            <h2>Cadastrar Utensílio Hospitalar</h2>
+            <form action="/estoque" method="POST">
+                <input type="text" name="nome_utensilio" placeholder="Nome do utensílio (ex: Seringa 10ml, Bisturi)" required>
+                <input type="number" name="quantidade_utensilio" placeholder="Quantidade inicial" min="0" required>
+                <button type="submit">Cadastrar Utensílio</button>
+            </form>
+        </div>
+
         <h2>Utensílios em Estoque</h2>
         <table>
             <thead>
                 <tr>
-                    <th>Utensílio</th>
+                    <th>Utensílio Médico</th>
                     <th>Quantidade Atual</th>
-                    <th>Ações</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -43,117 +121,24 @@
                     <td>{{ ut['nome'] }}</td>
                     <td>{{ ut['quantidade_atual'] }}</td>
                     <td>
-                        </td>
+                        {% if ut['quantidade_atual'] == 0 %}
+                            <span style="color: #dc3545; font-weight: bold;">Esgotado</span>
+                        {% elif ut['quantidade_atual'] < 10 %}
+                            <span style="color: #ea580c; font-weight: bold;">Estoque Baixo</span>
+                        {% else %}
+                            <span style="color: #059669; font-weight: bold;">Disponível</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
+                {% if not utensilios %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #64748b;">Nenhum utensílio cadastrado no banco de dados.</td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
-    </div>
-</div>
-<div class="cadastro">
-
-    <h2>Cadastrar Medicamento</h2>
-
-    <form action="/cadastrar" method="POST">
-
-        <input
-            type="text"
-            name="nome"
-            placeholder="Nome do medicamento"
-            required
-        >
-        <input
-            type="number"
-            name="quantidade"
-            placeholder="Quantidade inicial"
-            min="0"
-            required
-        >
-
-        <label style="display: block; margin: 10px 0;">
-            <input type="checkbox" name="alta_prioridade" value="1">
-            Definir como Alta Prioridade (Alerta de Estoque Mínimo)
-        </label>
-
-        <button type="submit">Cadastrar</button>
-
-    </form>
-
-</div>
-
-<h2>Medicamentos em Estoque</h2>
-
-{% set estoque_minimo = 5 %}
-{% for med in medicamentos %}
-    {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < estoque_minimo %}
-        <div class="alerta" style="background-color: #fff3cd; color: #856404; padding: 10px; margin-bottom: 10px; border: 1px solid #ffeeba; border-radius: 4px;">
-            ⚠️ O medicamento "{{ med['nome'] }}" está abaixo do estoque mínimo ({{ estoque_minimo }}). Comprar imediatamente!
-        </div>
-    {% endif %}
-{% endfor %}
-
-<table>
-
-    <thead>
-        <tr>
-            <th>Medicamento</th>
-            <th>Quantidade</th>
-            <th>Prioridade</th> 
-            <th>Entrada</th>
-            <th>Saída</th>
-            <th>Ações</th> </tr>
-    </thead>
-
-    <tbody>
-
-    {% for med in medicamentos %}
-<tr 
-    {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5 %}
-        style="background-color:#ffcccc; font-weight:bold;"
-    {% endif %}
->
-    <td>{{ med['nome'] }}</td>
-    <td>{{ med['quantidade_atual'] }}</td>
-    
-    <td>
-        {% if med['alta_prioridade'] == 1 %}
-            <span style="color: red; font-weight: bold;">Alta</span>
-        {% else %}
-            <span style="color: gray;">Normal</span>
-        {% endif %}
-    </td>
-
-    <td>
-        <form action="/movimentar" method="POST">
-            <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
-            <input type="hidden" name="tipo" value="entrada">
-            <input type="number" name="quantidade" min="1" value="1" required>
-            <button type="submit">Entrada</button>
-        </form>
-    </td>
-
-    <td>
-        <form action="/movimentar" method="POST">
-            <input type="hidden" name="id_medicamento" value="{{ med['id'] }}">
-            <input type="hidden" name="tipo" value="saida">
-            <input type="number" name="quantidade" min="1" value="1" required>
-            <button type="submit">Saída</button>
-        </form>
-    </td>
-
-    <td>
-        <form action="/excluir/{{ med['id'] }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este medicamento?');">
-            <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                Excluir
-            </button>
-        </form>
-    </td>
-</tr>
-    {% endfor %}
-
-    </tbody>
-
-</table>
-
+    </div> 
+</div> 
 </body>
 </html>
