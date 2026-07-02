@@ -136,6 +136,11 @@ def inicializar_banco():
         if not cursor.fetchone():
             cursor.execute("INSERT INTO MEDICAMENTOS (id, nome, quantidade_atual, alta_prioridade) VALUES (3, 'Maltodextrina', 0, 0)")
             cursor.execute("SELECT setval('medicamentos_id_seq', (SELECT MAX(id) FROM MEDICAMENTOS))")
+            cursor.execute("ALTER TABLE UTENSILIOS ADD COLUMN ativo INTEGER DEFAULT 1;")
+    except Exception:
+        conn.rollback()
+        cursor = conn.cursor()
+        
             
         conn.commit()
         cursor.close()
@@ -230,43 +235,57 @@ def estoque():
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # 1. Busca Medicamentos
-    cursor.execute('SELECT * FROM MEDICAMENTOS ORDER BY nome ASC')
+    # Se for um cadastro de utensílio (POST)
+    if request.method == 'POST' and 'nome_utensilio' in request.form:
+        nome_utensilio = request.form['nome_utensilio']
+        quantidade_utensilio = int(request.form['quantidade_utensilio'])
+        
+        try:
+            cursor.execute(
+                'INSERT INTO UTENSILIOS (nome, quantidade_atual) VALUES (%s, %s)',
+                (nome_utensilio, quantidade_utensilio)
+            )
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"Erro ao cadastrar utensílio: {e}")
+
+    # --- BUSCA DOS DADOS PARA AS ABAS ---
+
+    # 1. Busca APENAS os medicamentos ativos
+    cursor.execute('SELECT * FROM MEDICAMENTOS WHERE ativo = 1 ORDER BY nome ASC')
     medicamentos = cursor.fetchall()
 
-    # 2. Busca Utensílios
-    cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
+    # 2. Busca os utensílios ativos (caso aplique soft delete neles futuramente, adicione 'WHERE ativo = 1')
+    cursor.execute('SELECT * FROM UTENSILIOS ORDER BY nome ASC')
     utensilios = cursor.fetchall()
 
-    # 3. CORREÇÃO CRUCIAL: Agora com LEFT JOIN e COALESCE no lugar certo!
+    # 3. Busca o histórico de movimentações recente
     cursor.execute("""
-        SELECT m_mov.*, COALESCE(med.nome, 'Medicamento Removido') as medicamento_nome 
-        FROM MOVIMENTACOES_MEDICAMENTOS m_mov
-        LEFT JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
-        ORDER BY m_mov.data_hora DESC LIMIT 50;
+        SELECT m.data_hora, med.nome AS medicamento_nome, m.tipo, m.quantidade 
+        FROM MOVIMENTACOES_MEDICAMENTOS m
+        JOIN MEDICAMENTOS med ON m.id_medicamento = med.id
+        ORDER BY m.data_hora DESC 
+        LIMIT 50
     """)
     historico = cursor.fetchall()
 
-    # Bloco de alertas inteligente
+    # 4. Sistema de Alertas de estoque baixo/validade vencendo
     alerta = []
-    ESTOQUE_MINIMO = 5
-    hoje = datetime.now().date()
-
     for med in medicamentos:
-        if med['alta_prioridade'] == 1 and med['quantidade_atual'] < ESTOQUE_MINIMO:
-            alerta.append(f"⚠️ O medicamento de Alta Prioridade '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
-        
-        if med['data_validade']:
-            dias_para_vencer = (med['data_validade'] - hoje).days
-            if dias_para_vencer < 0:
-                alerta.append(f"❌ CRÍTICO: O medicamento '{med['nome']}' ESTÁ VENCIDO desde {med['data_validade'].strftime('%d/%m/%Y')}.")
-            elif dias_para_vencer <= 30:
-                alerta.append(f"⏳ ATENÇÃO: O medicamento '{med['nome']}' vai vencer em {dias_para_vencer} dias ({med['data_validade'].strftime('%d/%m/%Y')}).")
+        if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5:
+            alerta.append(f"Alerta: O medicamento de alta prioridade '{med['nome']}' está com estoque crítico ({med['quantidade_atual']} un).")
 
     cursor.close()
     conn.close()
-    
-    return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, historico=historico, alerta=alerta)
+
+    return render_template(
+        'estoque.html',
+        medicamentos=medicamentos,
+        utensilios=utensilios,
+        historico=historico,
+        alerta=alerta
+    )
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
     if 'funcionario_id' not in session:
