@@ -55,7 +55,7 @@ def inicializar_banco():
     );
 
     CREATE TABLE IF NOT EXISTS PACIENTES (
-        pessoa_id INTEGER PRIMARY KEY REFERENCES PESSOAS(id) ON DELETE CASCADE
+        pessoa_id INTEGER PRIMARY KEY REFERENCES PACIENTES(pessoa_id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS MEDICOS (
@@ -114,6 +114,7 @@ def inicializar_banco():
     );
     """
     
+    # Passo 1: Criação das Tabelas e Registos Iniciais Base
     try:
         conn = conectar()
         cursor = conn.cursor()
@@ -136,20 +137,35 @@ def inicializar_banco():
         if not cursor.fetchone():
             cursor.execute("INSERT INTO MEDICAMENTOS (id, nome, quantidade_atual, alta_prioridade) VALUES (3, 'Maltodextrina', 0, 0)")
             cursor.execute("SELECT setval('medicamentos_id_seq', (SELECT MAX(id) FROM MEDICAMENTOS))")
-            cursor.execute("ALTER TABLE UTENSILIOS ADD COLUMN ativo INTEGER DEFAULT 1;")
-    except Exception:
-        conn.rollback()
-        cursor = conn.cursor()
-        
             
         conn.commit()
         cursor.close()
         conn.close()
-        print("Banco de dados configurado com sucesso!")
+        print("Banco de dados base configurado com sucesso!")
     except Exception as e:
-        print(f"Erro ao inicializar tabelas: {e}")
+        print(f"Erro ao inicializar tabelas base: {e}")
 
-inicializar_banco()
+    # Passo 2: Injeção Isolada da coluna 'ativo' nos Medicamentos (Soft Delete)
+    try:
+        conn_iso = conectar()
+        cursor_iso = conn_iso.cursor()
+        cursor_iso.execute("ALTER TABLE MEDICAMENTOS ADD COLUMN ativo INTEGER DEFAULT 1;")
+        conn_iso.commit()
+        cursor_iso.close()
+        conn_iso.close()
+    except Exception:
+        pass # Ignora se a coluna já existir
+
+    # Passo 3: Injeção Isolada da coluna 'ativo' nos Utensílios
+    try:
+        conn_iso = conectar()
+        cursor_iso = conn_iso.cursor()
+        cursor_iso.execute("ALTER TABLE UTENSILIOS ADD COLUMN ativo INTEGER DEFAULT 1;")
+        conn_iso.commit()
+        cursor_iso.close()
+        conn_iso.close()
+    except Exception:
+        pass
 
 def salvar_historico_fechamento():
     print("Gerando relatório de movimentações...")
