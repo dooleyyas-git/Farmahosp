@@ -15,7 +15,29 @@
             border-top: 3px solid #0f766e;
         }
 
-        /* Estilos para o Painel de Saída no canto inferior direito */
+        /* Ajuste no container principal para nunca sobrepor o carrinho flutuante */
+        .abas-container {
+            margin-right: 0px;
+            transition: margin-right 0.3s ease;
+        }
+
+        /* Container que blinda as tabelas contra quebras de layout */
+        .tabela-responsiva {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tabela-responsiva table {
+            margin-top: 0 !important; /* Reseta margem interna */
+            width: 100%;
+            min-width: 850px; /* Garante que os dados fiquem legíveis e alinhados */
+            border-collapse: collapse;
+        }
+
+        /* Estilos Otimizados para o Painel de Saída no canto inferior direito */
         .carrinho-flutuante {
             position: fixed;
             bottom: 20px;
@@ -23,19 +45,26 @@
             background: white;
             border: 2px solid #0f766e;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            width: 320px;
-            max-height: 400px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            width: 250px;
+            max-height: 350px;
             display: flex;
             flex-direction: column;
             z-index: 1000;
             overflow: hidden;
+            animation: surgirPainel 0.2s ease-out;
+        }
+
+        @keyframes surgirPainel {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         .carrinho-header {
             background: #0f766e;
             color: white;
-            padding: 10px;
+            padding: 8px 10px;
+            font-size: 0.85rem;
             font-weight: bold;
             display: flex;
             justify-content: space-between;
@@ -43,20 +72,24 @@
         }
 
         .carrinho-itens {
-            padding: 10px;
+            padding: 8px;
             overflow-y: auto;
             flex-grow: 1;
-            font-size: 0.9rem;
-            max-height: 250px;
+            font-size: 0.8rem;
+            max-height: 200px;
+            background-color: #f8fafc;
         }
 
         .carrinho-item-linha {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
             padding-bottom: 4px;
+            background: white;
+            padding: 6px;
+            border-radius: 4px;
         }
 
         .btn-remover-item {
@@ -64,14 +97,15 @@
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 2px 6px;
+            padding: 1px 5px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            font-weight: bold;
         }
 
         .carrinho-footer {
-            padding: 10px;
-            background: #f8fafc;
+            padding: 8px;
+            background: white;
             border-top: 1px solid #e2e8f0;
         }
 
@@ -80,8 +114,9 @@
             color: white;
             border: none;
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border-radius: 6px;
+            font-size: 0.85rem;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
@@ -108,7 +143,7 @@
         {% endfor %}
     {% endif %}
 
-    <div class="abas-container">
+    <div class="abas-container" id="main-container">
         <input type="radio" id="aba-medicamentos" name="abas" checked>
         <input type="radio" id="aba-utensilios" name="abas">
         <input type="radio" id="aba-historico" name="abas">
@@ -161,55 +196,66 @@
                 <input type="text" id="buscador-med" onkeyup="filtrarMedicamentos()" placeholder=" Buscar medicamento por nome..." style="padding: 8px 15px; border: 1px solid #cbd5e1; border-radius: 6px; width: 300px; font-size: 0.9rem;">
             </div>
 
-            <table id="tabela-medicamentos">
-                <thead>
-                    <tr>
-                        <th>Medicamento</th>
-                        <th>Tipo</th> 
-                        <th>Dosagem</th> 
-                        <th>Descrição</th>
-                        <th>Validade</th>
-                        <th>Quantidade</th>
-                        <th>Prioridade</th> 
-                        <th>Selecionar Saída</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for med in medicamentos %}
-                    <tr {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5 %} style="background-color:#ffcccc; font-weight:bold;" {% endif %}>
-                        <td class="nome-med">{{ med['nome'] }}</td>
-                        <td>{{ med['tipo'] if med['tipo'] else '-' }}</td>
-                        <td>{{ med['dosagem'] if med['dosagem'] else '-' }}</td>
-                        <td style="font-style: italic; color: #475569; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ med['descricao'] }}">
-                            {{ med['descricao'] if med['descricao'] else '-' }}
-                        </td>
-                        <td style="font-weight: bold;">
-                            {{ med['data_validade'].strftime('%d/%m/%Y') if med['data_validade'] else '-' }}
-                        </td>
-                        <td>{{ med['quantidade_atual'] }}</td>
-                        <td>
-                            {% if med['alta_prioridade'] == 1 %}
-                                <span style="color: red; font-weight: bold;">Alta</span>
-                            {% else %}
-                                <span style="color: gray;">Normal</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                <input type="number" id="qtd-saida-med-{{ med['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
-                                <button type="button" onclick="adicionarAoCarrinho('{{ med['id'] }}', '{{ med['nome'] }}', 'medicamento')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
-                            </div>
-                        </td>
-                        <td>
-                            <form action="/excluir/{{ med['id'] }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este medicamento?');">
-                                <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Excluir</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="tabela-responsiva">
+                <table id="tabela-medicamentos">
+                    <thead>
+                        <tr>
+                            <th>Medicamento</th>
+                            <th>Tipo</th> 
+                            <th>Dosagem</th> 
+                            <th>Descrição</th>
+                            <th>Validade</th>
+                            <th>Quantidade</th>
+                            <th>Prioridade</th> 
+                            <th>Adicionar Entrada</th>
+                            <th>Selecionar Saída</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for med in medicamentos %}
+                        <tr {% if med['alta_prioridade'] == 1 and med['quantidade_atual'] < 5 %} style="background-color:#ffcccc; font-weight:bold;" {% endif %}>
+                            <td class="nome-med">{{ med['nome'] }}</td>
+                            <td>{{ med['tipo'] if med['tipo'] else '-' }}</td>
+                            <td>{{ med['dosagem'] if med['dosagem'] else '-' }}</td>
+                            <td style="font-style: italic; color: #475569; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ med['descricao'] }}">
+                                {{ med['descricao'] if med['descricao'] else '-' }}
+                            </td>
+                            <td style="font-weight: bold;">
+                                {{ med['data_validade'].strftime('%d/%m/%Y') if med['data_validade'] else '-' }}
+                            </td>
+                            <td>{{ med['quantidade_atual'] }}</td>
+                            <td>
+                                {% if med['alta_prioridade'] == 1 %}
+                                    <span style="color: red; font-weight: bold;">Alta</span>
+                                {% else %}
+                                    <span style="color: gray;">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="/entrada_rapida" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                    <input type="hidden" name="id" value="{{ med['id'] }}">
+                                    <input type="hidden" name="tipo_item" value="medicamento">
+                                    <input type="number" name="quantidade" min="1" value="1" style="width: 50px; padding: 4px;">
+                                    <button type="submit" style="background-color: #059669; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+ Ent.</button>
+                                </form>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <input type="number" id="qtd-saida-med-{{ med['id'] }}" min="1" value="1" style="width: 50px; padding: 4px;">
+                                    <button type="button" onclick="adicionarAoCarrinho('{{ med['id'] }}', '{{ med['nome'] }}', 'medicamento')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+ Lista</button>
+                                </div>
+                            </td>
+                            <td>
+                                <form action="/excluir/{{ med['id'] }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este medicamento?');">
+                                    <button type="submit" style="background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="conteudo-aba" id="conteudo-utensilios">
@@ -223,100 +269,120 @@
             </div>
 
             <h2>Utensílios em Estoque</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Utensílio Médico</th>
-                        <th>Quantidade Atual</th>
-                        <th>Status</th>
-                        <th>Selecionar Saída</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ut in utensilios %}
-                    <tr>
-                        <td>{{ ut['nome'] }}</td>
-                        <td>{{ ut['quantidade_atual'] }}</td>
-                        <td>
-                            {% if ut['quantidade_atual'] == 0 %}
-                                <span style="color: #dc3545; font-weight: bold;">Esgotado</span>
-                            {% elif ut['quantidade_atual'] < 10 %}
-                                <span style="color: #ea580c; font-weight: bold;">Estoque Baixo</span>
-                            {% else %}
-                                <span style="color: #059669; font-weight: bold;">Disponível</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: flex; gap: 4px; align-items: center;">
-                                <input type="number" id="qtd-saida-ut-{{ ut['id'] }}" min="1" value="1" style="width: 60px; padding: 4px;">
-                                <button type="button" onclick="adicionarAoCarrinho('{{ ut['id'] }}', '{{ ut['nome'] }}', 'utensilio')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">+ Lista</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="tabela-responsiva">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Utensílio Médico</th>
+                            <th>Quantidade Atual</th>
+                            <th>Status</th>
+                            <th>Adicionar Entrada</th>
+                            <th>Selecionar Saída</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ut in utensilios %}
+                        <tr>
+                            <td>{{ ut['nome'] }}</td>
+                            <td>{{ ut['quantidade_atual'] }}</td>
+                            <td>
+                                {% if ut['quantidade_atual'] == 0 %}
+                                    <span style="color: #dc3545; font-weight: bold;">Esgotado</span>
+                                {% elif ut['quantidade_atual'] < 10 %}
+                                    <span style="color: #ea580c; font-weight: bold;">Estoque Baixo</span>
+                                {% else %}
+                                    <span style="color: #059669; font-weight: bold;">Disponível</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="/entrada_rapida" method="POST" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+                                    <input type="hidden" name="id" value="{{ ut['id'] }}">
+                                    <input type="hidden" name="tipo_item" value="utensilio">
+                                    <input type="number" name="quantidade" min="1" value="1" style="width: 50px; padding: 4px;">
+                                    <button type="submit" style="background-color: #059669; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+ Ent.</button>
+                                </form>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <input type="number" id="qtd-saida-ut-{{ ut['id'] }}" min="1" value="1" style="width: 50px; padding: 4px;">
+                                    <button type="button" onclick="adicionarAoCarrinho('{{ ut['id'] }}', '{{ ut['nome'] }}', 'utensilio')" style="background-color: #ea580c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold;">+ Lista</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="conteudo-aba" id="conteudo-historico">
             <h2>Histórico de Movimentações (Saídas Recentes)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Data / Hora</th>
-                        <th>Item Movimentado</th>
-                        <th>Operação</th>
-                        <th>Quantidade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in historico %}
-                    <tr>
-                        <td>{{ log['data_hora'].strftime('%d/%m/%Y %H:%M:%S') if log['data_hora'] else '-' }}</td>
-                        <td>{{ log['medicamento_nome'] }}</td>
-                        <td>
-                            <span style="background-color: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">SAÍDA</span>
-                        </td>
-                        <td><strong>{{ log['quantidade'] }} unidades</strong></td>
-                    </tr>
-                    {% endfor %}
-                    {% if not historico %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; color: #64748b;">Nenhuma movimentação registrada no histórico.</td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+            <div class="tabela-responsiva">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>Item Movimentado</th>
+                            <th>Operação</th>
+                            <th>Quantidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in historico %}
+                        <tr>
+                            <td>{{ log['data_hora'].strftime('%d/%m/%Y %H:%M:%S') if log['data_hora'] else '-' }}</td>
+                            <td>{{ log['medicamento_nome'] }}</td>
+                            <td>
+                                <span style="background-color: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">SAÍDA</span>
+                            </td>
+                            <td><strong>{{ log['quantidade'] }} unidades</strong></td>
+                        </tr>
+                        {% endfor %}
+                        {% if not historico %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #64748b;">Nenhuma movimentação registrada no histórico.</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>
 
     <div class="carrinho-flutuante" id="carrinho-painel" style="display: none;">
         <div class="carrinho-header">
-            <span>Lista de Saída Coletiva</span>
-            <button onclick="limparCarrinho()" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.8rem; text-decoration: underline;">Limpar Tudo</button>
+            <span>Lista de Saída Lote</span>
+            <button onclick="limparCarrinho()" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.75rem; text-decoration: underline;">Limpar</button>
         </div>
         <div class="carrinho-itens" id="carrinho-itens-lista">
             </div>
         <div class="carrinho-footer">
-            <button class="btn-confirmar-saida" onclick="enviarSaidaColetiva()">Confirmar Saída do Lote</button>
+            <button class="btn-confirmar-saida" onclick="enviarSaidaColetiva()">Confirmar Saída</button>
         </div>
     </div>
 
     <script>
-        let carrinho = [];
+        var carrinho = [];
 
         function adicionarAoCarrinho(id, nome, tipo) {
-            let inputId = tipo === 'medicamento' ? 'qtd-saida-med-' + id : 'qtd-saida-ut-' + id;
-            let inputQtd = document.getElementById(inputId);
-            let quantidade = parseInt(inputQtd.value);
+            var inputId = (tipo === 'medicamento') ? 'qtd-saida-med-' + id : 'qtd-saida-ut-' + id;
+            var inputQtd = document.getElementById(inputId);
+            var quantidade = parseInt(inputQtd.value, 10);
 
             if (quantidade <= 0 || isNaN(quantidade)) {
                 alert("Insira uma quantidade válida!");
                 return;
             }
 
-            let itemExistente = carrinho.find(item => item.id === id && item.tipo_item === tipo);
+            var itemExistente = null;
+            for (var i = 0; i < carrinho.length; i++) {
+                if (carrinho[i].id === id && carrinho[i].tipo_item === tipo) {
+                    itemExistente = carrinho[i];
+                    break;
+                }
+            }
+
             if (itemExistente) {
                 itemExistente.quantidade += quantidade;
             } else {
@@ -327,7 +393,13 @@
         }
 
         function removerDoCarrinho(id, tipo) {
-            carrinho = carrinho.filter(item => !(item.id === id && item.tipo_item === tipo));
+            var novoCarrinho = [];
+            for (var i = 0; i < carrinho.length; i++) {
+                if (!(carrinho[i].id === id && carrinho[i].tipo_item === tipo)) {
+                    novoCarrinho.push(carrinho[i]);
+                }
+            }
+            carrinho = novoCarrinho;
             renderizarCarrinho();
         }
 
@@ -337,29 +409,44 @@
         }
 
         function renderizarCarrinho() {
-            const painel = document.getElementById("carrinho-painel");
-            const lista = document.getElementById("carrinho-itens-lista");
+            var painel = document.getElementById("carrinho-painel");
+            var lista = document.getElementById("carrinho-itens-lista");
+            var container = document.getElementById("main-container");
             
             if (carrinho.length === 0) {
                 painel.style.display = "none";
+                container.style.marginRight = "0px";
                 return;
             }
 
             painel.style.display = "flex";
+            container.style.marginRight = "280px";
             lista.innerHTML = "";
 
-            carrinho.forEach(item => {
-                let rotuloTipo = item.tipo_item === 'medicamento' ? 'Med' : 'Utensílio';
-                lista.innerHTML += `
-                    <div class="carrinho-item-linha">
-                        <div>
-                            <strong>${item.nome}</strong> <span style="font-size:0.75rem; color:gray;">(${rotuloTipo})</span><br>
-                            Qtd: ${item.quantidade}
-                        </div>
-                        <button class="btn-remover-item" onclick="removerDoCarrinho('${item.id}', '${item.tipo_item}')">X</button>
-                    </div>
-                `;
-            });
+            for (var j = 0; j < carrinho.length; j++) {
+                var item = carrinho[j];
+                var rotuloTipo = (item.tipo_item === 'medicamento') ? 'Med' : 'Utens.';
+
+                var divLinha = document.createElement("div");
+                divLinha.className = "carrinho-item-linha";
+
+                var divTexto = document.createElement("div");
+                divTexto.innerHTML = "<strong>" + item.nome + "</strong> <span style='font-size:0.7rem; color:gray;'>(" + rotuloTipo + ")</span><br>Qtd: " + item.quantidade;
+
+                var btnRemover = document.createElement("button");
+                btnRemover.className = "btn-remover-item";
+                btnRemover.innerText = "X";
+                
+                (function(idItem, tipoItem) {
+                    btnRemover.onclick = function() {
+                        removerDoCarrinho(idItem, tipoItem);
+                    };
+                })(item.id, item.tipo_item);
+
+                divLinha.appendChild(divTexto);
+                divLinha.appendChild(btnRemover);
+                lista.appendChild(divLinha);
+            }
         }
 
         function enviarSaidaColetiva() {
@@ -372,8 +459,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ itens: carrinho })
             })
-            .then(res => res.json().then(data => ({ status: res.status, body: data })))
-            .then(res => {
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    return { status: res.status, body: data };
+                });
+            })
+            .then(function(res) {
                 if (res.status === 200) {
                     alert("Saída em lote processada com sucesso!");
                     limparCarrinho();
@@ -382,20 +473,20 @@
                     alert("Erro ao processar saída: " + res.body.erro);
                 }
             })
-            .catch(err => {
+            .catch(function(err) {
                 alert("Erro de comunicação com o servidor.");
                 console.error(err);
             });
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const radioMed = document.getElementById("aba-medicamentos");
-            const radioUtensilios = document.getElementById("aba-utensilios");
-            const radioHistorico = document.getElementById("aba-historico");
+            var radioMed = document.getElementById("aba-medicamentos");
+            var radioUtensilios = document.getElementById("aba-utensilios");
+            var radioHistorico = document.getElementById("aba-historico");
 
-            const conteudoMed = document.getElementById("conteudo-medicamentos");
-            const conteudoUtensilios = document.getElementById("conteudo-utensilios");
-            const conteudoHistorico = document.getElementById("conteudo-historico");
+            var conteudoMed = document.getElementById("conteudo-medicamentos");
+            var conteudoUtensilios = document.getElementById("conteudo-utensilios");
+            var conteudoHistorico = document.getElementById("conteudo-historico");
 
             function alternarAbas() {
                 if (radioMed && radioMed.checked) {
