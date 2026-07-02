@@ -221,46 +221,36 @@ def logout():
 @app.route('/estoque')
 @app.route('/estoque', methods=['GET', 'POST'])
 def estoque():
-    # 1. Proteção de Login
+    # 1.Proteção de Login
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
 
     conn = conectar()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-    # ==========================================================================
-    # PARTE NOVA: PROCESSAR CADASTRO DE UTENSÍLIO (RODA SE FOR SUBMIT DE UTENSÍLIO)
-    # ==========================================================================
     if request.method == 'POST':
         nome_utensilio = request.form.get('nome_utensilio')
         qtd_utensilio = request.form.get('quantidade_utensilio')
         
         if nome_utensilio and qtd_utensilio:
-            # Insere na tabela de utensílios que você já possui no banco
+            #Insere na tabela de utensílios que você já possui no banco
             cursor.execute(
                 "INSERT INTO utensilios (nome, quantidade_atual) VALUES (%s, %s);",
                 (nome_utensilio, int(qtd_utensilio))
             )
-            conn.commit() # Salva no PostgreSQL do Render
+            conn.commit() #Salva no PostgreSQL do Render
             
             cursor.close()
             conn.close()
             
-            # Recarrega a página atualizando as tabelas
+            #Recarrega a página atualizando as tabelas
             return redirect(url_for('estoque'))
 
-    # ==========================================================================
-    # SUA LOGICA ATUAL + BUSCA DE UTENSÍLIOS (RODA SEMPRE NO CARREGAMENTO)
-    # ==========================================================================
-    # 1. Busca os medicamentos (Como já estava no seu código)
     cursor.execute('SELECT * FROM MEDICAMENTOS ORDER BY nome ASC')
     medicamentos = cursor.fetchall()
 
-    # 2. NOVA BUSCA: Busca os utensílios para listar na nova aba
     cursor.execute('SELECT * FROM utensilios ORDER BY nome ASC')
     utensilios = cursor.fetchall()
-
-    # Sua lógica de alertas atuais (mantida perfeitamente)
     medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
     ESTOQUE_MINIMO = 5
     alerta = []
@@ -272,31 +262,38 @@ def estoque():
     cursor.close()
     conn.close()
     
-    # AGORA RETORNA TAMBÉM OS UTENSÍLIOS PARA O HTML
     return render_template('estoque.html', medicamentos=medicamentos, utensilios=utensilios, alerta=alerta)
 
+@app.route('/cadastrar', methods=['POST'])
 @app.route('/cadastrar', methods=['POST'])
 def cadastrar():
     if 'funcionario_id' not in session:
         return redirect(url_for('index'))
-
-    nome = request.form['nome']
-    quantidade = int(request.form['quantidade'])
-    alta_prioridade = 1 if 'alta_prioridade' in request.form else 0
-
-    if not nome or quantidade < 0:
-        return redirect(url_for('estoque'))
+        
+    nome = request.form.get('nome')
+    tipo = request.form.get('tipo_medicamento')  # Pega o valor do <select> do HTML
+    dosagem = request.form.get('dosagem')         # Pega o valor do input de dosagem do HTML
+    quantidade = request.form.get('quantidade')
+    alta_prioridade = request.form.get('alta_prioridade', 0)
+    
+    if alta_prioridade == '1':
+        alta_prioridade = 1
+    else:
+        alta_prioridade = 0
 
     conn = conectar()
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-    cursor.execute(
-        'INSERT INTO MEDICAMENTOS (nome, quantidade_atual, alta_prioridade) VALUES (%s, %s, %s)',
-        (nome, quantidade, alta_prioridade)
-    )
-
+    cursor = conn.cursor()
+    
+    # Salvando exatamente nas colunas que você já tem criadas na tabela!
+    cursor.execute("""
+        INSERT INTO MEDICAMENTOS (nome, tipo, dosagem, quantidade_atual, alta_prioridade) 
+        VALUES (%s, %s, %s, %s, %s);
+    """, (nome, tipo, dosagem, int(quantidade), alta_prioridade))
+    
     conn.commit()
+    cursor.close()
     conn.close()
+    
     return redirect(url_for('estoque'))
 
 @app.route('/excluir/<int:id_medicamento>', methods=['POST'])
