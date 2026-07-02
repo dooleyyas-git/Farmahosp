@@ -247,13 +247,25 @@ def estoque():
     """)
     historico = cursor.fetchall()
 
+   # >>> BLOCO DE ALERTAS CORRIGIDO E ATUALIZADO <<<
     alerta = []
-    medicamentos_criticos = ['Paracetamol', 'Dipirona', 'Amoxicilina']
     ESTOQUE_MINIMO = 5
+    hoje = datetime.now().date()
 
     for med in medicamentos:
+        # 1. Alerta de Estoque Mínimo
         if med['nome'] in medicamentos_criticos and med['quantidade_atual'] < ESTOQUE_MINIMO:
             alerta.append(f"⚠️ O medicamento '{med['nome']}' está abaixo do estoque mínimo ({ESTOQUE_MINIMO}).")
+        
+        # 2. Alerta de Validade (Menos de 30 dias)
+        if med['data_validade']:
+            # O PostgreSQL pode retornar como objeto date, e calcular a diferença dos dias diretamente
+            dias_para_vencer = (med['data_validade'] - hoje).days
+            # Caso ocorra o vencimento total
+            if dias_para_vencer < 0:
+                alerta.append(f"❌ CRÍTICO: O medicamento '{med['nome']}' ESTÁ VENCIDO desde {med['data_validade'].strftime('%d/%m/%Y')}.")
+            elif dias_para_vencer <= 30:
+                alerta.append(f"⏳ ATENÇÃO: O medicamento '{med['nome']}' vai vencer em {dias_para_vencer} dias ({med['data_validade'].strftime('%d/%m/%Y')}).")
 
     cursor.close()
     conn.close()
@@ -291,6 +303,14 @@ def cadastrar():
         INSERT INTO MOVIMENTACOES_MEDICAMENTOS (id_medicamento, tipo, quantidade)
         VALUES (%s, 'entrada', %s);
     """, (novo_id, quantidade))
+    # 3. Busca o Histórico
+    cursor.execute("""
+        SELECT m_mov.*, COALESCE(med.nome, 'Medicamento Removido') as medicamento_nome 
+        FROM MOVIMENTACOES_MEDICAMENTOS m_mov
+        LEFT JOIN MEDICAMENTOS med ON m_mov.id_medicamento = med.id 
+        ORDER BY m_mov.data_hora DESC LIMIT 50;
+    """)
+    historico = cursor.fetchall()
     
     conn.commit()
     cursor.close()
