@@ -1,0 +1,46 @@
+CREATE SCHEMA integrador;
+
+CREATE TABLE integrador.funcionarios (
+    id INTEGER PRIMARY KEY,
+    cpf VARCHAR(20) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE integrador.medicamentos (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE integrador.movimentacoes (
+    id INTEGER PRIMARY KEY,
+    id_medicamento INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL, --talvez outra tabela
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_tipo CHECK (tipo IN ('entrada', 'saida')),
+    CONSTRAINT fk_medicamento
+        FOREIGN KEY (id_medicamento)
+        REFERENCES integrador.medicamentos(id)
+);
+
+CREATE TABLE integrador.equipamentos (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE integrador.movimentacoes_equipamentos (
+    id INTEGER PRIMARY KEY,
+    id_equipamento INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_tipo_equip CHECK (tipo IN ('entrada', 'saida')),
+    CONSTRAINT fk_equipamento
+        FOREIGN KEY (id_equipamento)
+        REFERENCES integrador.equipamentos(id)
+);
+
+MODIFICAÇÕES PENDENTES:
+nome para u usuário
+descrição do laboratório, dosagem, unidade, caixa, tipo de medicamento(comprimido, liquido)
+3 tabelas: MEDICO - ENFERMEIRO - PACIENTE

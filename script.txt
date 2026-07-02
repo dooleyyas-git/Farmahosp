@@ -1,0 +1,58 @@
+CREATE TABLE funcionarios (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cpf CHAR(11) NOT NULL UNIQUE,
+    senha TEXT NOT NULL
+);
+
+CREATE TABLE medicamentos (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nome TEXT NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE movimentacoes (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_medicamento INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_tipo CHECK (tipo IN ('entrada', 'saida')),
+    CONSTRAINT fk_medicamento
+        FOREIGN KEY (id_medicamento)
+        REFERENCES medicamentos(id)
+);
+
+------ 
+
+Versão Genérica
+     |
+     V
+CREATE TABLE funcionarios (
+    id INTEGER PRIMARY KEY,
+    cpf CHAR(11) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE medicamentos (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0,
+    CHECK (quantidade_atual >= 0)
+);
+
+CREATE TABLE movimentacoes (
+    id INTEGER PRIMARY KEY,
+    id_medicamento INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id_funcionario INTEGER,
+    
+    CHECK (tipo IN ('entrada', 'saida')),
+    
+    FOREIGN KEY (id_medicamento)
+        REFERENCES medicamentos(id),
+        
+    FOREIGN KEY (id_funcionario)
+        REFERENCES funcionarios(id)
+);
+
+

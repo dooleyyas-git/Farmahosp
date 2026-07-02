@@ -1,0 +1,13 @@
+| MySQL / SQL Server          | SQLite                                                            |
+| --------------------------- | ----------------------------------------------------------------- |
+| `SHOW DATABASES;`           | Não existe                                                        |
+| `SHOW TABLES;`              | `.tables` ou `SELECT name FROM sqlite_master WHERE type='table';` |
+| `DESCRIBE tabela;`          | `PRAGMA table_info(tabela);`                                      |
+| `USE banco;`                | Não existe (o arquivo `.db` já é o banco)                         |
+| `AUTO_INCREMENT`            | `AUTOINCREMENT`                                                   |
+| `VARCHAR(255)`              | `TEXT`                                                            |
+| `DATETIME NOW()`            | `CURRENT_TIMESTAMP`                                               |
+| `TRUNCATE TABLE tabela;`    | `DELETE FROM tabela;`                                             |
+| `DROP DATABASE banco;`      | Apagar o arquivo `.db`                                            |
+| `SHOW CREATE TABLE tabela;` | `.schema tabela`                                                  |
+| `ENUM('A','B')`             | `TEXT + CHECK`                                                    |

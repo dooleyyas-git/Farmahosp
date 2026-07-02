@@ -1,0 +1,35 @@
+CREATE TABLE funcionarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cpf TEXT UNIQUE NOT NULL,
+    senha TEXT NOT NULL
+);
+
+CREATE TABLE medicamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE movimentacoes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_medicamento INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    data_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CHECK (tipo IN ('entrada', 'saida')),
+    FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id)
+);
+
+CREATE TABLE equipamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE movimentacoes_equipamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_equipamento INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    data_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CHECK (tipo IN ('entrada', 'saida')),
+    FOREIGN KEY (id_equipamento) REFERENCES equipamentos(id)
+);

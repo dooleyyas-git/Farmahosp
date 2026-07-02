@@ -1,0 +1,113 @@
+GPT, tenho um site em Python usando o Flask e HTTPS para um trabalho e quero adicionar funções.
+
+Resposta: Perguntei sobre o que você quer adicionar e expliquei sobre Flask e HTTPS.
+
+---
+
+Quero que a autenticação dele seja por CPF, mas que os pontos e traços do CPF sejam adicionados automaticamente conforme vou digitando os números.
+
+Resposta: Sugeri usar JavaScript para máscara de CPF no campo input.
+
+---
+
+Pergunta sobre reiniciar ou reinstalar o app: Já funciona direto se você estiver com debug=True.
+
+---
+
+Fornecido HTML de login.
+
+Resposta: Expliquei sobre o uso de `url_for` e como o Flask processa o formulário.
+
+---
+
+Pergunta sobre mudança de senha e verificação de força da senha.
+
+Resposta: Sugerido JS para avaliar a senha, mas depois confirmado que o sistema teria senha fixa.
+
+---
+
+Código JS atual fornecido.
+
+---
+
+Confirmação: esquece parte da senha, o sistema terá senha fixa.
+
+---
+
+Pergunta: onde está definida a senha fixa?
+
+Resposta: No banco SQLite, inserção inicial:
+
+INSERT OR IGNORE INTO funcionarios (cpf, senha)
+VALUES ('123.456.789-99', 'Testezao123!')
+
+---
+
+Código do app Flask fornecido, com rotas: index, login, logout, estoque, cadastrar, movimentar.
+
+---
+
+Pedido: alerta no estoque caso produto x chegue a mínimo.
+
+Resposta: Sugerido adicionar lógica no template Jinja2 para destacar medicamentos críticos.
+
+---
+
+Quer que o alerta se aplique apenas a alguns medicamentos específicos.
+
+Resposta: Listar os medicamentos específicos na condição do Jinja2.
+
+---
+
+Pergunta: para `/estoque` existir, preciso criar arquivo HTML?
+
+Resposta: Sim, precisa criar `estoque.html` dentro da pasta `templates`.
+
+---
+
+Exemplo de `estoque.html` básico fornecido, com alertas e destaque para medicamentos críticos.
+
+---
+
+Pergunta: HTML precisa de CSS?
+
+Resposta: Não precisa, mas sem CSS fica simples. Mostrei exemplo de `style.css` para alertas, tabela e destaque.
+
+---
+
+Pergunta: onde ficam os `if`s no HTML? Antes do body?
+
+Resposta: Dentro do `<body>`, onde você quer que o conteúdo apareça.
+
+---
+
+Erro do Flask: `AssertionError: View function mapping is overwriting an existing endpoint function: estoque`.
+
+Resposta: Significa que há duas funções chamadas `estoque`. Sugestão: renomear uma delas e atualizar `url_for()` nos templates.
+
+---
+
+Alerta não funcionou. Código do loop de medicamentos fornecido.
+
+Resposta: Ajustei o `for` para incluir destaque de linha e alerta condicional usando Jinja2.
+
+---
+
+Sugestão de bloco de alerta no topo da página:
+
+{% set estoque_minimo = 5 %}
+{% set criticos = ['Paracetamol','Dipirona','Amoxicilina'] %}
+{% for med in medicamentos %}
+    {% if med['nome'] in criticos and med['quantidade_atual'] < estoque_minimo %}
+        <div class="alerta">
+            ⚠️ O medicamento "{{ med['nome'] }}" está abaixo do estoque mínimo ({{ estoque_minimo }}). Comprar imediatamente!
+        </div>
+    {% endif %}
+{% endfor %}
+
+---
+
+Pergunta final: quero salvar todo esse chat em TXT.
+
+Resposta: Gerando arquivo `chat_projeto_estoque.txt` com todo o conteúdo do chat.
+

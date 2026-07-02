@@ -1,0 +1,116 @@
+
+CREATE TABLE FUNCIONARIOS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(20) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE MEDICAMENTOS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    descricao VARCHAR(500),
+    dosagem VARCHAR(50),
+    unidade VARCHAR(50),
+    quantidade_caixa INTEGER,
+    tipo VARCHAR(50),
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE UTENSILIOS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    descricao VARCHAR(500),
+    quantidade_atual INTEGER DEFAULT 0
+);
+
+CREATE TABLE LABORATORIOS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    descricao VARCHAR(500)
+);
+
+CREATE TABLE MEDICAMENTO_LABORATORIO (
+    id_medicamento INTEGER NOT NULL,
+    id_laboratorio INTEGER NOT NULL,
+    PRIMARY KEY (id_medicamento, id_laboratorio),
+    FOREIGN KEY (id_medicamento) REFERENCES MEDICAMENTOS(id),
+    FOREIGN KEY (id_laboratorio) REFERENCES LABORATORIOS(id)
+);
+
+CREATE TABLE MEDICOS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    crm VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE ENFERMEIROS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    coren VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE PACIENTES (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(20) UNIQUE
+);
+
+CREATE TABLE MOVIMENTACOES_UTENSILIOS (
+    id INTEGER PRIMARY KEY,
+    id_utensilio INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (tipo IN ('entrada', 'saida')),
+    FOREIGN KEY (id_utensilio) REFERENCES UTENSILIOS(id)
+);
+
+CREATE TABLE MOVIMENTACOES_MEDICAMENTOS (
+    id INTEGER PRIMARY KEY,
+    id_medicamento INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (tipo IN ('entrada', 'saida')),
+    FOREIGN KEY (id_medicamento) REFERENCES MEDICAMENTOS(id)
+);
+
+/* table movimentações com as duas unificadas tanto a medicamentos quanto a utensilios não sei qual ficaria melhor
+CREATE TABLE MOVIMENTACOES (
+    id INTEGER PRIMARY KEY,
+    item_tipo VARCHAR(20) NOT NULL,
+    item_id INTEGER NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+    data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CHECK (item_tipo IN ('medicamento', 'utensilio')),
+    CHECK (tipo IN ('entrada', 'saida'))
+);*/
+
+CREATE TABLE PESSOAS (
+    id INTEGER PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    cpf VARCHAR(20) UNIQUE
+);
+/*
+versão alternativa com a tabela pessoas unificando dados que tanto os funcionários e pacientes 
+tem tambem estou na duvida se uso assim ou do jeito que está fora do comentário
+CREATE TABLE FUNCIONARIOS (
+    pessoa_id INTEGER PRIMARY KEY,
+    senha VARCHAR(255) NOT NULL,
+
+    FOREIGN KEY (pessoa_id) REFERENCES PESSOAS(id)
+);
+
+CREATE TABLE ENFERMEIROS (
+    pessoa_id INTEGER PRIMARY KEY,
+    coren VARCHAR(50) UNIQUE NOT NULL,
+
+    FOREIGN KEY (pessoa_id) REFERENCES PESSOAS(id)
+);
+
+CREATE TABLE PACIENTES (
+    pessoa_id INTEGER PRIMARY KEY,
+
+    FOREIGN KEY (pessoa_id) REFERENCES PESSOAS(id)
+);
+*/

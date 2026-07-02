@@ -1,0 +1,32 @@
+=================================================================================
+             RELAÇÃO COMPLETA DE CHAVES E CONEXÕES (SQL ORIGINAL)
+=================================================================================
+
+1. HERANÇA DE PESSOAS (Relações 1:1 com a tabela base)
+---------------------------------------------------------------------------------
+* PESSOAS (id)  ◄───(1:1)───  FUNCIONARIOS (pessoa_id)
+* PESSOAS (id)  ◄───(1:1)───  MEDICOS (pessoa_id)
+* PESSOAS (id)  ◄───(1:1)───  ENFERMEIROS (pessoa_id)
+* PESSOAS (id)  ◄───(1:1)───  PACIENTES (pessoa_id)
+
+
+2. COMPOSIÇÃO DE RECEITAS (Quem passa o quê para quem)
+---------------------------------------------------------------------------------
+* PACIENTES (pessoa_id)  ◄───(1:N)───  RECEITAS (paciente_id)
+* MEDICOS (pessoa_id)    ◄───(1:N)───  RECEITAS (medico_id)
+* RECEITAS (id)          ◄───(1:N)───  ITENS_RECEITA (receita_id)
+* MEDICAMENTOS (id)      ◄───(1:N)───  ITENS_RECEITA (medicamento_id)
+
+
+3. ASSOCIAÇÃO DE MEDICAMENTOS E LABORATÓRIOS (Relação N:N)
+---------------------------------------------------------------------------------
+* MEDICAMENTOS (id)      ◄───(1:N)───  MEDICAMENTO_LABORATORIO (id_medicamento)
+* LABORATORIOS (id)      ◄───(1:N)───  MEDICAMENTO_LABORATORIO (id_laboratorio)
+
+
+4. HISTÓRICO DE MOVIMENTAÇÕES (Auditoria de Estoque)
+---------------------------------------------------------------------------------
+* MEDICAMENTOS (id)      ◄───(1:N)───  MOVIMENTACOES_MEDICAMENTOS (id_medicamento)
+* UTENSILIOS (id)        ◄───(1:N)───  MOVIMENTACOES_UTENSILIOS (id_utensilio)
+
+=================================================================================

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - EFH</title>
+
+    <!-- url_for gera o caminho correto para arquivos estáticos no Flask -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // CPF
+    document.getElementById('cpf').addEventListener('input', function (e) {
+        let value = e.target.value;
+
+        value = value.replace(/\D/g, '');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        
+        e.target.value = value;
+    });
+
+    // SENHA
+    const senhaInput = document.getElementById('senha');
+    const forcaTexto = document.getElementById('forcaSenha');
+
+    senhaInput.addEventListener('input', function () {
+        const senha = senhaInput.value;
+
+        let forca = 0;
+
+        if (senha.length >= 6) forca++;
+        if (/[A-Z]/.test(senha)) forca++;
+        if (/[a-z]/.test(senha)) forca++;
+        if (/[0-9]/.test(senha)) forca++;
+
+        if (senha.length === 0) {
+            forcaTexto.textContent = "";
+        } else if (forca <= 2) {
+            forcaTexto.textContent = "Senha fraca";
+            forcaTexto.style.color = "red";
+        } else {
+            forcaTexto.textContent = "Senha média/forte";
+            forcaTexto.style.color = "green";
+        }
+    });
+
+});
+</script>
+<body>
+
+<div class="login-container">
+
+    <div class="login-box">
+
+        <h1>Farmácia Hospitalar</h1>
+        <h2>Sistema de Estoque</h2>
+
+        <!-- action define a rota do Flask que recebe os dados; method="POST" envia os dados com segurança -->
+        <form action="/login" method="POST">
+
+            <label for="cpf">CPF</label>
+            <!-- name="cpf" permite que o Flask leia o valor via request.form['cpf'] -->
+            <input
+                type="text"
+                id="cpf"
+                name="cpf"
+                placeholder="000.000.000-00"
+                maxlength="14"
+                required
+            >
+
+            <label for="senha">Senha</label>
+            <!-- name="senha" permite que o Flask leia o valor via request.form['senha'] -->
+            <input
+                type="password"
+                id="senha"
+                name="senha"
+                placeholder="Digite sua senha"
+                required
+            >
+
+            <!-- Exibe a mensagem de erro enviada pelo Flask quando o login falha -->
+            {% if erro %}
+            <p class="erro">{{ erro }}</p>
+            {% endif %}
+
+            <button type="submit">Entrar</button>
+
+        </form>
+
+        <p class="rodape">Acesso restrito a funcionários</p>
+
+    </div>
+
+</div>
+</body>
+</html>
